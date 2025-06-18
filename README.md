@@ -1,5 +1,10 @@
 # miniROS-rs
 
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://ruziniuuuuu.github.io/miniROS-rs/)
+[![macOS Tested](https://img.shields.io/badge/macOS-tested-brightgreen?logo=apple)](https://github.com/ruziniuuuuu/miniROS-rs)
+[![Rust](https://img.shields.io/badge/rust-1.70+-orange?logo=rust)](https://www.rust-lang.org)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE-MIT)
+
 A **minimal**, high-performance ROS2-compatible middleware written in Rust. Focused on core robotics communication with zero bloat.
 
 ## Why Mini?
@@ -11,6 +16,8 @@ A **minimal**, high-performance ROS2-compatible middleware written in Rust. Focu
 - 📦 **Lightweight**: Minimal dependencies, cross-platform
 
 ## Quick Start
+
+> 📖 **For detailed tutorials, visit our [complete documentation](https://ruziniuuuuu.github.io/miniROS-rs/)**
 
 ### Rust
 
@@ -113,16 +120,20 @@ python python/examples/image_publisher.py    # OpenCV integration
 python python/examples/robot_visualization.py # 3D visualization
 ```
 
-## Documentation
+## 📚 Documentation
 
+**🔗 [Live Documentation](https://ruziniuuuuu.github.io/miniROS-rs/)** - Complete interactive documentation
+
+### Quick Links
+- **[Quick Start](https://ruziniuuuuu.github.io/miniROS-rs/quick-start.html)** - 5-minute tutorial
+- **[Python Bindings](https://ruziniuuuuu.github.io/miniROS-rs/python-bindings.html)** - Python API guide
+- **[DDS Transport](https://ruziniuuuuu.github.io/miniROS-rs/dds-transport.html)** - ROS2 compatibility
+- **[Performance](https://ruziniuuuuu.github.io/miniROS-rs/performance.html)** - Benchmarks and optimization
+
+### Local Development
 ```bash
 cd docs && mdbook serve --open
 ```
-
-- **[Quick Start](docs/src/quick-start.md)** - 5-minute tutorial
-- **[Python Bindings](docs/src/python-bindings.md)** - Python API guide
-- **[DDS Transport](docs/src/dds-transport.md)** - ROS2 compatibility
-- **[Performance](docs/src/performance.md)** - Benchmarks and optimization
 
 ## Architecture
 
@@ -148,7 +159,7 @@ Application Layer (Your Code)
 ## Platform Support
 
 - ✅ **Linux** - Full support
-- ✅ **macOS** - Full support  
+- ✅ **macOS** - Full support (tested on macOS 14.5+) 🍎
 - ✅ **Windows** - Core features
 
 ## Configuration
