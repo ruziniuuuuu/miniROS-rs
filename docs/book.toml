@@ -1,0 +1,43 @@
+[book]
+title = "miniROS-rs Documentation"
+description = "A lightweight, high-performance robotics middleware written in Rust"
+authors = ["Chenyu Cao <ruziniuuuuu@gmail.com>"]
+language = "en"
+multilingual = false
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = true
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "navy"
+smart-punctuation = true
+mathjax-support = false
+copy-fonts = true
+additional-css = []
+additional-js = []
+no-section-label = false
+git-repository-url = "https://github.com/your-username/miniROS-rs"
+git-repository-icon = "fa-github"
+edit-url-template = "https://github.com/your-username/miniROS-rs/edit/main/docs/src/{path}"
+site-url = "/miniROS-rs/"
+
+[output.html.search]
+enable = true
+limit-results = 30
+teaser-word-count = 30
+use-boolean-and = true
+boost-title = 2
+boost-hierarchy = 1
+boost-paragraph = 1
+expand = true
+heading-split-level = 3
+
+[output.html.print]
+enable = true
+page-break = true
+
+[preprocessor.links]
+# Allows links to other chapters
