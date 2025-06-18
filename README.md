@@ -7,9 +7,9 @@ A high-performance, cross-platform ROS2-like middleware written in Rust, focusin
 - 🚀 **High Performance**: Built on Tokio async runtime with support for concurrent message processing
 - 🌐 **Cross-Platform**: Supports Linux, macOS, and Windows
 - 🐍 **Python Bindings**: ROS2-compatible Python API powered by PyO3
-- 🔗 **Multiple Transports**: UDP and TCP transport support
+- 🔗 **DDS Transport**: ROS2-compatible Data Distribution Service implementation
 - 🔍 **Auto Discovery**: Multicast-based node and service discovery
-- 📨 **Pub/Sub**: Decoupled message passing mechanism
+- 📨 **Pub/Sub**: Decoupled message passing mechanism with QoS policies
 - 🔧 **Service Calls**: Synchronous request/response communication pattern
 - 🧩 **Type Safety**: Compile-time type checking and serialization
 - 📝 **Clean API**: Easy-to-use modern Rust API
@@ -94,7 +94,7 @@ MiniROS uses a layered architecture design:
 ├─────────────────────────────────────────┤
 │      Message Serialization Layer       │
 ├─────────────────────────────────────────┤
-│      Transport Layer (UDP/TCP)         │
+│       DDS Transport Layer (ROS2)       │
 ├─────────────────────────────────────────┤
 │        Network & OS Interfaces         │
 └─────────────────────────────────────────┘
@@ -278,6 +278,8 @@ python python/examples/listener.py
 # Advanced examples
 python python/examples/demo_all.py            # Comprehensive demo
 python python/examples/number_publisher.py    # Multi-type messages
+python python/examples/image_publisher.py     # Image processing with OpenCV
+python python/examples/robot_visualization.py # 3D robot visualization
 ```
 
 For complete Python documentation, see **[PYTHON_USAGE.md](PYTHON_USAGE.md)**.
@@ -366,11 +368,13 @@ MiniROS supports the following platforms:
 | Feature | MiniROS | ROS2 |
 |---------|---------|------|
 | Language | Rust | C++/Python |
+| Transport | Simplified DDS | Full DDS (CycloneDX/FastDDS) |
 | Performance | High | Medium |
 | Memory Safety | Compile-time guaranteed | Runtime checks |
 | Cross-platform | Native support | Partial support |
 | Learning Curve | Medium | Steep |
 | Ecosystem | Emerging | Mature |
+| ROS2 Compatibility | API Compatible | Native |
 
 ## Contributing
 

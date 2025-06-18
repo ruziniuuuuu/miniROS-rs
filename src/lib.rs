@@ -1,49 +1,48 @@
-//! # MiniROS - A high-performance, cross-platform ROS2-like middleware
+//! MiniROS - A high-performance, cross-platform ROS2-like middleware
 //! 
-//! MiniROS provides core robotics middleware functionality with focus on:
-//! - High-performance inter-process communication
-//! - Cross-platform compatibility
-//! - Simple and clean API
-//! - Async/await support
+//! This library provides core robotics communication primitives with
+//! ROS2-compatible DDS transport layer for maximum interoperability.
 
 pub mod core;
+pub mod error;
+pub mod message;
 pub mod node;
 pub mod publisher;
 pub mod subscriber;
-pub mod message;
 pub mod service;
 pub mod discovery;
-pub mod transport;
-pub mod error;
-pub mod zenoh_transport;
-pub mod visualization;
 
+// Transport layer - DDS-based by default for ROS2 compatibility
+#[cfg(feature = "dds-transport")]
+pub mod dds_transport;
+#[cfg(feature = "tcp-transport")]
+pub mod transport;
+pub mod zenoh_transport;
+
+// Optional features
+#[cfg(feature = "visualization")]
+pub mod visualization;
 #[cfg(feature = "python")]
 pub mod python;
 
-// Prelude module for easy imports
+// Re-exports for convenience
+pub use error::{Result, MiniRosError};
+pub use core::Context;
+pub use node::Node;
+pub use publisher::Publisher;
+pub use subscriber::Subscriber;
+pub use service::{Service, ServiceClient};
+pub use message::{Message, StringMsg, Int32Msg, Float64Msg, BoolMsg, EmptyMsg, Stamped};
+
+/// Prelude module for common imports
 pub mod prelude {
     pub use crate::{
-        node::Node,
-        publisher::Publisher,
-        subscriber::Subscriber,
-        message::Message,
-        service::{Service, ServiceClient},
-        error::{Result, MiniRosError},
-        core::Context,
+        Result, MiniRosError, Context, Node, Publisher, Subscriber, 
+        Service, ServiceClient, Message, StringMsg, Int32Msg, 
+        Float64Msg, BoolMsg, EmptyMsg, Stamped
     };
+    pub use std::time::Duration;
 }
-
-// Re-export main types for easy access
-pub use crate::{
-    node::Node,
-    publisher::Publisher,
-    subscriber::Subscriber,
-    message::Message,
-    service::{Service, ServiceClient},
-    error::{Result, MiniRosError},
-    core::Context,
-};
 
 // Python module entry point
 #[cfg(feature = "python")]

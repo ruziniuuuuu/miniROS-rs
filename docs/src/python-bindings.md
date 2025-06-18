@@ -107,9 +107,25 @@ mini_ros.Float64(data=3.14)        # Float message
 Run the included examples:
 
 ```bash
+# Basic examples
 python python/examples/talker.py           # Basic publisher
 python python/examples/listener.py         # Basic subscriber  
 python python/examples/demo_all.py         # Comprehensive demo
+
+# Advanced examples with visualization
+python python/examples/image_publisher.py  # Image processing with OpenCV
+python python/examples/image_subscriber.py # Image visualization
+python python/examples/robot_visualization.py # 3D robot simulation
+```
+
+### Prerequisites for Advanced Examples
+
+```bash
+# Install additional dependencies
+pip install opencv-python numpy rerun-sdk
+
+# Or using uv (recommended)
+uv add opencv-python numpy rerun-sdk
 ```
 
 ## ROS2 Migration
