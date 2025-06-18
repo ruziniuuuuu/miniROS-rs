@@ -2,6 +2,8 @@
 
 **miniROS** is a minimal, high-performance robotics middleware written in Rust. It provides the essential communication primitives needed for robotics applications without the complexity and overhead of traditional ROS systems.
 
+<!-- Documentation deployed via GitHub Pages -->
+
 ## Design Philosophy: Less is More
 
 miniROS embraces minimalism:
