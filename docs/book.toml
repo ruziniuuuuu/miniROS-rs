@@ -19,9 +19,9 @@ copy-fonts = true
 additional-css = []
 additional-js = []
 no-section-label = false
-git-repository-url = "https://github.com/your-username/miniROS-rs"
+git-repository-url = "https://github.com/ruziniuuuuu/miniROS-rs"
 git-repository-icon = "fa-github"
-edit-url-template = "https://github.com/your-username/miniROS-rs/edit/main/docs/src/{path}"
+edit-url-template = "https://github.com/ruziniuuuuu/miniROS-rs/edit/main/docs/src/{path}"
 site-url = "/miniROS-rs/"
 
 [output.html.search]
