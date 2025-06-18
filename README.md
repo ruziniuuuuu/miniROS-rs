@@ -1,6 +1,7 @@
 # miniROS-rs
 
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://ruziniuuuuu.github.io/miniROS-rs/)
+[![DeepWiki](https://img.shields.io/badge/docs-DeepWiki-purple)](https://deepwiki.com/ruziniuuuuu/miniROS-rs)
 [![macOS Tested](https://img.shields.io/badge/macOS-tested-brightgreen?logo=apple)](https://github.com/ruziniuuuuu/miniROS-rs)
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange?logo=rust)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE-MIT)
@@ -122,7 +123,8 @@ python python/examples/robot_visualization.py # 3D visualization
 
 ## 📚 Documentation
 
-**🔗 [Live Documentation](https://ruziniuuuuu.github.io/miniROS-rs/)** - Complete interactive documentation
+**🔗 [Live Documentation](https://ruziniuuuuu.github.io/miniROS-rs/)** - Complete interactive documentation  
+**🌐 [DeepWiki](https://deepwiki.com/ruziniuuuuu/miniROS-rs)** - Alternative documentation view
 
 ### Quick Links
 - **[Quick Start](https://ruziniuuuuu.github.io/miniROS-rs/quick-start.html)** - 5-minute tutorial
