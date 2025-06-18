@@ -293,7 +293,8 @@ git clone <repository-url>
 cd miniROS-rs
 
 # Run examples in learning sequence
-cargo run --example 01_basic_pubsub          # Basic publisher-subscriber
+cargo run --example 01_basic_pubsub          # Basic publisher-subscriber (TCP)
+cargo run --example 01_basic_pubsub --features dds-transport  # With DDS transport (ROS2 compatible)
 cargo run --example 02_custom_messages       # Custom message types
 cargo run --example 03_services              # Service communication
 cargo run --example 04_visualization_basic   # Basic visualization (starts GUI)

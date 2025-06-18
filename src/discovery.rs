@@ -78,7 +78,7 @@ impl DiscoveryService {
             socket: None,
             nodes: Arc::new(DashMap::new()),
             multicast_addr,
-            local_endpoint: format!("127.0.0.1:{}", 7400 + domain_id),
+            local_endpoint: format!("0.0.0.0:{}", 7400 + domain_id),
             _stop_sender: None,
         })
     }

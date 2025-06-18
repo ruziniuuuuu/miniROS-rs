@@ -328,6 +328,14 @@ impl DdsTransport {
     pub fn domain_id(&self) -> u32 {
         self.participant.domain_id()
     }
+
+    /// Shutdown DDS transport
+    pub async fn shutdown(&self) -> Result<()> {
+        // Clear publishers and subscribers
+        self.participant.publishers.write().await.clear();
+        self.participant.subscribers.write().await.clear();
+        Ok(())
+    }
 }
 
 #[cfg(test)]

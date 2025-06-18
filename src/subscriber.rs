@@ -43,10 +43,10 @@ impl<T: Message> Subscriber<T> {
             loop {
                 tokio::select! {
                     // Receive raw data from transport
-                    raw_data = async {
-                        transport_receiver.recv().ok()
+                    raw_data_result = async {
+                        transport_receiver.recv()
                     } => {
-                        if let Some(data) = raw_data {
+                        if let Ok(data) = raw_data_result {
                             // Deserialize the message
                             match bincode::deserialize::<T>(&data) {
                                 Ok(message) => {

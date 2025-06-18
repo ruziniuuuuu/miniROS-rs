@@ -2,7 +2,13 @@
 
 use crate::error::Result;
 use crate::discovery::DiscoveryService;
+
+// Import transport based on feature flags
+#[cfg(feature = "tcp-transport")]
 use crate::transport::TransportManager;
+#[cfg(feature = "dds-transport")]
+use crate::dds_transport::DdsTransport;
+
 use std::sync::Arc;
 use parking_lot::RwLock;
 use uuid::Uuid;
@@ -17,7 +23,10 @@ pub(crate) struct ContextInner {
     pub domain_id: u32,
     pub instance_id: Uuid,
     pub discovery: Arc<RwLock<DiscoveryService>>,
+    #[cfg(feature = "tcp-transport")]
     pub transport: Arc<RwLock<TransportManager>>,
+    #[cfg(feature = "dds-transport")]
+    pub dds_transport: Arc<RwLock<Option<DdsTransport>>>,
 }
 
 impl Context {
@@ -30,13 +39,15 @@ impl Context {
     pub fn with_domain_id(domain_id: u32) -> Result<Self> {
         let instance_id = Uuid::new_v4();
         let discovery = Arc::new(RwLock::new(DiscoveryService::new(domain_id)?));
-        let transport = Arc::new(RwLock::new(TransportManager::new()?));
 
         let inner = ContextInner {
             domain_id,
             instance_id,
             discovery,
-            transport,
+            #[cfg(feature = "tcp-transport")]
+            transport: Arc::new(RwLock::new(TransportManager::new()?)),
+            #[cfg(feature = "dds-transport")]
+            dds_transport: Arc::new(RwLock::new(None)),
         };
 
         Ok(Context {
@@ -64,10 +75,18 @@ impl Context {
             discovery.start().await?;
         }
 
-        // Initialize transport manager
+        // Initialize transport based on feature flags
+        #[cfg(feature = "tcp-transport")]
         {
             let mut transport = self.inner.transport.write();
             transport.start().await?;
+        }
+
+        #[cfg(feature = "dds-transport")]
+        {
+            let dds_transport = DdsTransport::new(self.domain_id()).await?;
+            let mut transport_lock = self.inner.dds_transport.write();
+            *transport_lock = Some(dds_transport);
         }
 
         tracing::info!("MiniROS context initialized successfully");
@@ -84,10 +103,20 @@ impl Context {
             discovery.stop().await?;
         }
 
-        // Stop transport manager
+        // Stop transport based on feature flags
+        #[cfg(feature = "tcp-transport")]
         {
             let mut transport = self.inner.transport.write();
             transport.stop().await?;
+        }
+
+        #[cfg(feature = "dds-transport")]
+        {
+            let mut transport_lock = self.inner.dds_transport.write();
+            if let Some(dds_transport) = transport_lock.as_ref() {
+                dds_transport.shutdown().await?;
+            }
+            *transport_lock = None;
         }
 
         tracing::info!("MiniROS context shutdown complete");
