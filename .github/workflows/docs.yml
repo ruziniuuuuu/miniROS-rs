@@ -40,20 +40,28 @@ jobs:
           cd docs
           mdbook build
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/book
+
+      # Only setup and deploy to Pages on main/develop branches
       - name: Setup Pages
         id: pages
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
         uses: actions/configure-pages@v4
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+        continue-on-error: true
 
-      - name: Upload artifact
+      - name: Upload Pages artifact
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && steps.pages.outcome == 'success'
         uses: actions/upload-pages-artifact@v3
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
         with:
           path: docs/book
 
-  # Deploy job
+  # Deploy job - only runs if Pages is properly configured
   deploy:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -62,4 +70,13 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4 
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Pages deployment status
+        if: steps.deployment.outcome == 'failure'
+        run: |
+          echo "::warning::GitHub Pages deployment failed. Please ensure:"
+          echo "::warning::1. GitHub Pages is enabled in repository settings"
+          echo "::warning::2. Source is set to 'GitHub Actions'"
+          echo "::warning::3. Repository has proper permissions" 
