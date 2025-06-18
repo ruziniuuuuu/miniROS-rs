@@ -1,0 +1,57 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "mini-ros"
+description = "A high-performance, cross-platform ROS2-like middleware implementation"
+authors = [
+    {name = "Chenyu Cao", email = "ruziniuuuuu@gmail.com"},
+]
+license = {text = "MIT OR Apache-2.0"}
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["robotics", "ros", "middleware", "communication", "async"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+]
+dependencies = []
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/ChenyuCao/miniROS-rs"
+Repository = "https://github.com/ChenyuCao/miniROS-rs"
+Documentation = "https://miniros-rs.readthedocs.io"
+"Bug Tracker" = "https://github.com/ChenyuCao/miniROS-rs/issues"
+
+[project.optional-dependencies]
+visualization = []
+
+[tool.maturin]
+features = ["python"]
+python-source = "python"
+module-name = "mini_ros._core"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+    "python/tests",
+] 

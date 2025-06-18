@@ -18,6 +18,9 @@ pub mod error;
 pub mod zenoh_transport;
 pub mod visualization;
 
+#[cfg(feature = "python")]
+pub mod python;
+
 // Prelude module for easy imports
 pub mod prelude {
     pub use crate::{
@@ -41,3 +44,14 @@ pub use crate::{
     error::{Result, MiniRosError},
     core::Context,
 };
+
+// Python module entry point
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
+#[cfg(feature = "python")]
+#[pymodule]
+fn _core(_py: Python, m: &PyModule) -> PyResult<()> {
+    python::init_python_module(m)?;
+    Ok(())
+}

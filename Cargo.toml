@@ -6,6 +6,10 @@ authors = ["Chenyu Cao <ruziniuuuuu@gmail.com>"]
 description = "A high-performance, cross-platform ROS2-like middleware implementation"
 license = "MIT OR Apache-2.0"
 
+[lib]
+name = "mini_ros"
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -20,11 +24,20 @@ bincode = "1.3"
 parking_lot = "0.12"
 futures = "0.3"
 # zenoh = "1.1.0"  # Temporarily disabled due to version conflicts
-rerun = { version = "0.20", features = ["native_viewer"] }
+rerun = { version = "0.20", features = ["native_viewer"], optional = true }
 fastrand = "2.0"
+
+# Python bindings (optional)
+pyo3 = { version = "0.20", features = ["extension-module"], optional = true }
+pyo3-asyncio = { version = "0.20", features = ["tokio-runtime"], optional = true }
 
 [dev-dependencies]
 tokio-test = "0.4"
+
+[features]
+default = ["visualization"]
+python = ["pyo3", "pyo3-asyncio"]
+visualization = ["rerun"]
 
 # Learning Examples (Sequential)
 [[example]]
