@@ -1,43 +1,83 @@
 # Python Bindings
 
-miniROS provides Python bindings with ROS2-compatible API for easy migration and rapid prototyping.
+miniROS provides **minimal, fast** Python bindings that are compatible with ROS2 APIs. Get the performance of Rust with the simplicity of Python.
 
-## Quick Setup
-
-### Recommended: Using uv (10-100x faster than pip)
+## Installation
 
 ```bash
-# Install uv (extremely fast Python package manager)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install build tool
-uv tool install maturin
-
-# Build and install
-maturin develop --features python
-
-# Verify
-python -c "import mini_ros; print('✅ miniROS Python ready!')"
-```
-
-### Alternative: Using pip
-
-```bash
-# Install build tool
+# Requires Rust toolchain
 pip install maturin
-
-# Build and install  
 maturin develop --features python
-
-# Verify
-python -c "import mini_ros; print('✅ miniROS Python ready!')"
 ```
 
-## Basic Usage
+## Core API
 
-### Publisher
+### Basic Usage
 
 ```python
+import mini_ros
+
+# Initialize once
+mini_ros.init()
+
+# Create node
+node = mini_ros.Node('my_node')
+
+# Publisher
+pub = node.create_publisher(mini_ros.String, 'topic', 10)
+msg = mini_ros.String()
+msg.data = 'Hello miniROS!'
+pub.publish(msg)
+
+# Subscriber
+def callback(msg):
+    print(f'Received: {msg.data}')
+
+sub = node.create_subscription(mini_ros.String, 'topic', callback, 10)
+
+# Run
+mini_ros.spin(node)
+```
+
+## Message Types
+
+### Built-in Types
+```python
+# String
+msg = mini_ros.String()
+msg.data = "text"
+
+# Numbers
+int_msg = mini_ros.Int32()
+int_msg.data = 42
+
+float_msg = mini_ros.Float64()
+float_msg.data = 3.14159
+
+# Boolean
+bool_msg = mini_ros.Bool()
+bool_msg.data = True
+```
+
+### Custom Messages
+Python bindings automatically handle any JSON-serializable data:
+
+```python
+# Dictionary as message
+custom_msg = {
+    'position': {'x': 1.0, 'y': 2.0, 'z': 3.0},
+    'timestamp': time.time()
+}
+pub.publish(custom_msg)
+```
+
+## Examples
+
+### Simple Talker/Listener
+
+**Talker:**
+```python
+#!/usr/bin/env python3
 import mini_ros
 import time
 
@@ -46,105 +86,195 @@ node = mini_ros.Node('talker')
 pub = node.create_publisher(mini_ros.String, 'chatter', 10)
 
 msg = mini_ros.String()
-for i in range(5):
-    msg.data = f'Hello {i}'
-    pub.publish(msg)
-    node.get_logger().info(f'Published: {msg.data}')
-    time.sleep(1)
+count = 0
 
-node.destroy_node()
-mini_ros.shutdown()
+while mini_ros.ok():
+    msg.data = f'Hello World {count}'
+    pub.publish(msg)
+    node.get_logger().info(f'Publishing: {msg.data}')
+    count += 1
+    time.sleep(1)
 ```
 
-### Subscriber
-
+**Listener:**
 ```python
+#!/usr/bin/env python3
 import mini_ros
 
-class Listener(mini_ros.Node):
-    def __init__(self):
-        super().__init__('listener')
-        self.sub = self.create_subscription(
-            mini_ros.String, 'chatter', self.callback, 10)
-    
-    def callback(self, msg):
-        self.get_logger().info(f'Heard: {msg.data}')
+def callback(msg):
+    print(f'I heard: {msg.data}')
 
 mini_ros.init()
-node = Listener()
-# Note: spin() currently blocks indefinitely
+node = mini_ros.Node('listener')
+sub = node.create_subscription(mini_ros.String, 'chatter', callback, 10)
 mini_ros.spin(node)
 ```
 
-## Message Types
+### Image Processing
 
 ```python
-# Available message types
-mini_ros.String(data="hello")      # String message
-mini_ros.Int32(data=42)            # Integer message  
-mini_ros.Float64(data=3.14)        # Float message
+#!/usr/bin/env python3
+import mini_ros
+import cv2
+import numpy as np
+import json
+import time
+
+mini_ros.init()
+node = mini_ros.Node('image_publisher')
+pub = node.create_publisher(mini_ros.String, 'camera/image_raw', 10)
+
+# Generate synthetic image
+height, width = 480, 640
+frame_count = 0
+
+while mini_ros.ok():
+    # Create test pattern
+    image = np.zeros((height, width, 3), dtype=np.uint8)
+    cv2.putText(image, f'Frame {frame_count}', (50, 50), 
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    
+    # Create ROS-like image message
+    image_msg = {
+        'header': {
+            'stamp': time.time(),
+            'frame_id': 'camera_frame'
+        },
+        'height': height,
+        'width': width,
+        'encoding': 'bgr8',
+        'is_bigendian': False,
+        'step': width * 3,
+        'data_size': image.size
+    }
+    
+    # Publish as JSON
+    msg = mini_ros.String()
+    msg.data = json.dumps(image_msg)
+    pub.publish(msg)
+    
+    frame_count += 1
+    time.sleep(0.1)  # 10 FPS
 ```
 
-## API Reference
+### Robot Visualization
 
-### Core Functions
-- `mini_ros.init()` - Initialize system
-- `mini_ros.shutdown()` - Cleanup and exit
-- `mini_ros.ok()` - Check if running
-- `mini_ros.spin(node)` - Process callbacks
-- `mini_ros.spin_once(node, timeout_sec=None)` - Single iteration
+```python
+#!/usr/bin/env python3
+import mini_ros
+import rerun as rr
+import numpy as np
+import time
+import json
 
-### Node Class
-- `Node(name)` - Create node
-- `node.get_name()` - Get node name
-- `node.get_logger()` - Get logger
-- `node.create_publisher(msg_type, topic, qos)` - Create publisher
-- `node.create_subscription(msg_type, topic, callback, qos)` - Create subscriber
-- `node.destroy_node()` - Cleanup
+# Initialize rerun for 3D visualization
+rr.init("miniROS Robot Visualization")
+rr.spawn()
 
-## Examples
+mini_ros.init()
+node = mini_ros.Node('robot_visualizer')
 
-Run the included examples:
+# Publishers for different data types
+robot_pub = node.create_publisher(mini_ros.String, 'robot_state', 10)
+odom_pub = node.create_publisher(mini_ros.String, 'odometry', 10)
+laser_pub = node.create_publisher(mini_ros.String, 'laser_scan', 10)
 
-```bash
-# Basic examples
-python python/examples/talker.py           # Basic publisher
-python python/examples/listener.py         # Basic subscriber  
-python python/examples/demo_all.py         # Comprehensive demo
+# Simulation state
+position = np.array([0.0, 0.0, 0.0])
+velocity = np.array([0.5, 0.2, 0.0])
+yaw = 0.0
+yaw_rate = 0.3
 
-# Advanced examples with visualization
-python python/examples/image_publisher.py  # Image processing with OpenCV
-python python/examples/image_subscriber.py # Image visualization
-python python/examples/robot_visualization.py # 3D robot simulation
+while mini_ros.ok():
+    # Update robot state
+    position += velocity * 0.1
+    yaw += yaw_rate * 0.1
+    
+    # Robot state message
+    robot_state = {
+        'position': position.tolist(),
+        'orientation': [0, 0, np.sin(yaw/2), np.cos(yaw/2)],
+        'joint_positions': [np.sin(time.time() + i) for i in range(4)],
+        'timestamp': time.time()
+    }
+    
+    # Odometry message
+    odometry = {
+        'position': position.tolist(),
+        'velocity': velocity.tolist(),
+        'yaw': yaw,
+        'yaw_rate': yaw_rate,
+        'timestamp': time.time()
+    }
+    
+    # Laser scan (360 degree)
+    ranges = [np.random.uniform(0.5, 10.0) for _ in range(360)]
+    laser_scan = {
+        'angle_min': -np.pi,
+        'angle_max': np.pi,
+        'angle_increment': 2 * np.pi / 360,
+        'ranges': ranges,
+        'timestamp': time.time()
+    }
+    
+    # Publish all data
+    robot_pub.publish(mini_ros.String(data=json.dumps(robot_state)))
+    odom_pub.publish(mini_ros.String(data=json.dumps(odometry)))
+    laser_pub.publish(mini_ros.String(data=json.dumps(laser_scan)))
+    
+    # Log to rerun for 3D visualization
+    rr.log("robot/position", rr.Points3D([position]))
+    rr.log("robot/trajectory", rr.LineStrips3D([position.reshape(1, -1)]))
+    
+    node.get_logger().info(f'Robot pos: ({position[0]:.2f}, {position[1]:.2f}, {position[2]:.2f})')
+    time.sleep(0.1)
 ```
 
-### Prerequisites for Advanced Examples
+## Utilities
 
-```bash
-# Install additional dependencies
-pip install opencv-python numpy rerun-sdk
+```python
+# Check if system is running
+if mini_ros.ok():
+    # Do work
+    pass
 
-# Or using uv (recommended)
-uv add opencv-python numpy rerun-sdk
+# Process callbacks once
+mini_ros.spin_once(node, timeout_ms=100)
+
+# Shutdown cleanly
+mini_ros.shutdown()
 ```
 
-## ROS2 Migration
+## Logging
 
-miniROS Python API is designed for easy ROS2 migration:
+```python
+logger = node.get_logger()
+logger.info("Information message")
+logger.warn("Warning message") 
+logger.error("Error message")
+```
 
-| ROS2 | miniROS |
-|------|---------|
-| `import rclpy` | `import mini_ros` |
-| `rclpy.init()` | `mini_ros.init()` |
-| `rclpy.Node` | `mini_ros.Node` |
-| `std_msgs.msg.String` | `mini_ros.String` |
+## Performance Tips
 
-## Current Limitations
+1. **Minimize message size** - Use efficient data structures
+2. **Batch operations** - Group related data in single messages
+3. **Use appropriate QoS** - Default settings work for most cases
+4. **Avoid blocking operations** - Keep callbacks fast
 
-- Publishers/subscribers don't communicate yet (stub implementation)
-- No service/client support
-- No parameter server
-- Limited to String/Int32/Float64 messages
-- Synchronous only (no async/await)
+## ROS2 Compatibility
 
-The Python bindings provide the API surface for future full implementation. 
+miniROS Python API is designed to be familiar to ROS2 users:
+
+| miniROS | ROS2 equivalent |
+|---------|-----------------|
+| `mini_ros.init()` | `rclpy.init()` |
+| `mini_ros.Node()` | `rclpy.create_node()` |
+| `create_publisher()` | `create_publisher()` |
+| `create_subscription()` | `create_subscription()` |
+| `mini_ros.spin()` | `rclpy.spin()` |
+
+The key difference: **miniROS is simpler and faster**.
+
+---
+
+*Python bindings: ROS2 familiarity with Rust performance* 
