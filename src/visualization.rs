@@ -188,7 +188,7 @@ mod tests {
     fn test_visualization_config() {
         let config = VisualizationConfig::default();
         assert_eq!(config.application_id, "miniROS");
-        assert!(config.spawn_viewer);
+        assert!(!config.spawn_viewer);  // Default is buffered mode
     }
 
     #[test]

@@ -203,17 +203,14 @@ Clone the project and run built-in examples:
 git clone <repository-url>
 cd miniROS-rs
 
-# Run simple pub/sub example
-cargo run --example simple_pub_sub
-
-# Run visualization demo
-cargo run --example visualization_demo
-
-# Run Zenoh communication example  
-cargo run --example zenoh_communication
-
-# Run integrated demo (Zenoh + Rerun)
-cargo run --example integrated_demo
+# Run examples in learning sequence
+cargo run --example 01_basic_pubsub          # Basic publisher-subscriber
+cargo run --example 02_custom_messages       # Custom message types
+cargo run --example 03_services              # Service communication
+cargo run --example 04_visualization_basic   # Basic visualization (starts GUI)
+cargo run --example 05_zenoh_transport       # High-performance transport
+cargo run --example 06_visualization_advanced # Advanced 3D visualization
+cargo run --example 07_integrated_system     # Complete system demo
 
 # Run tests
 cargo test
@@ -224,7 +221,7 @@ cargo build --release
 
 ## 📚 Documentation
 
-Complete documentation is available as an interactive book built with [mdBook](https://rust-lang.github.io/mdBook/):
+Complete documentation is available as an interactive book:
 
 ```bash
 cd docs
@@ -232,19 +229,11 @@ mdbook serve --open
 ```
 
 The documentation includes:
-- **Getting Started**: [Installation](docs/src/getting-started/installation.md) and [Quick Start](docs/src/getting-started/quick-start.md)
-- **Core Concepts**: Nodes, messages, pub/sub, and services
-- **Visualization**: Complete [Rerun integration](docs/src/visualization/rerun.md) guide with [examples](docs/src/visualization/examples.md)
-- **Communication**: [Zenoh transport](docs/src/communication/zenoh.md) and discovery service
-- **API Reference**: Detailed function documentation
-- **Advanced Topics**: Performance tuning and custom development
-
-### Key Documentation Features
-- 🌐 **English Documentation**: Complete international accessibility
-- 📊 **Visualization Guide**: Comprehensive Rerun integration with working examples
-- 🔍 **Interactive Search**: Full-text search across all documentation
-- 📱 **Responsive Design**: Works on mobile and desktop
-- 🖨️ **Print-Friendly**: Optimized for PDF export
+- **[Quick Start](docs/src/quick-start.md)**: Get running in 5 minutes
+- **[Examples](docs/src/examples.md)**: Step-by-step tutorials  
+- **[Core Concepts](docs/src/concepts.md)**: Nodes, messages, communication
+- **[Visualization](docs/src/visualization.md)**: Real-time 3D visualization
+- **[API Reference](docs/src/api.md)**: Complete API documentation
 
 ## Configuration
 

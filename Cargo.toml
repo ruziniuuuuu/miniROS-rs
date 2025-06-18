@@ -26,22 +26,32 @@ fastrand = "2.0"
 [dev-dependencies]
 tokio-test = "0.4"
 
+# Learning Examples (Sequential)
 [[example]]
-name = "simple_pub_sub"
-path = "examples/simple_pub_sub.rs"
+name = "01_basic_pubsub"
+path = "examples/01_basic_pubsub.rs"
 
 [[example]]
-name = "basic_test"
-path = "examples/basic_test.rs"
+name = "02_custom_messages"
+path = "examples/02_custom_messages.rs"
 
 [[example]]
-name = "zenoh_communication"
-path = "examples/zenoh_communication.rs"
+name = "03_services"
+path = "examples/03_services.rs"
 
 [[example]]
-name = "visualization_demo"
-path = "examples/visualization_demo.rs"
+name = "04_visualization_basic"
+path = "examples/04_visualization_basic.rs"
 
 [[example]]
-name = "integrated_demo"
-path = "examples/integrated_demo.rs"
+name = "05_zenoh_transport"
+path = "examples/05_zenoh_transport.rs"
+
+[[example]]
+name = "06_visualization_advanced"
+path = "examples/06_visualization_advanced.rs"
+
+[[example]]
+name = "07_integrated_system"
+path = "examples/07_integrated_system.rs"
+
