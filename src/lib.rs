@@ -15,6 +15,8 @@ pub mod service;
 pub mod discovery;
 pub mod transport;
 pub mod error;
+pub mod zenoh_transport;
+pub mod visualization;
 
 // Prelude module for easy imports
 pub mod prelude {

@@ -24,6 +24,8 @@ pub enum MiniRosError {
     IoError(std::io::Error),
     /// Configuration error
     ConfigError(String),
+    /// Other generic error
+    Other(String),
 }
 
 impl fmt::Display for MiniRosError {
@@ -37,6 +39,7 @@ impl fmt::Display for MiniRosError {
             MiniRosError::Timeout(msg) => write!(f, "Timeout: {}", msg),
             MiniRosError::IoError(err) => write!(f, "IO error: {}", err),
             MiniRosError::ConfigError(msg) => write!(f, "Configuration error: {}", msg),
+            MiniRosError::Other(msg) => write!(f, "Other error: {}", msg),
         }
     }
 }
