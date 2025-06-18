@@ -26,9 +26,31 @@ pip install mini-ros
 
 ### Build from Source
 
+#### Recommended: Using uv (10-100x faster than pip)
+
 ```bash
 # Clone the repository
-git clone https://github.com/ChenyuCao/miniROS-rs.git
+git clone https://github.com/ruziniuuuuu/miniROS-rs.git
+cd miniROS-rs
+
+# Install uv - extremely fast Python package manager written in Rust
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install maturin for building Python extensions
+uv tool install maturin
+
+# Build and install in development mode
+maturin develop --features python
+
+# Or build wheel for distribution
+maturin build --features python --release
+```
+
+#### Alternative: Using pip
+
+```bash
+# Clone the repository
+git clone https://github.com/ruziniuuuuu/miniROS-rs.git
 cd miniROS-rs
 
 # Install maturin for building Python extensions

@@ -202,6 +202,21 @@ MiniROS provides Python bindings with ROS2-compatible syntax:
 
 ### Installation
 
+#### Recommended: Using uv (10-100x faster than pip)
+
+```bash
+# Install uv - extremely fast Python package manager written in Rust
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install build tool
+uv tool install maturin
+
+# Build and install Python package
+maturin develop --features python
+```
+
+#### Alternative: Using pip
+
 ```bash
 # Install Python dependencies
 pip install maturin

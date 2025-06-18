@@ -4,11 +4,29 @@ miniROS provides Python bindings with ROS2-compatible API for easy migration and
 
 ## Quick Setup
 
+### Recommended: Using uv (10-100x faster than pip)
+
+```bash
+# Install uv (extremely fast Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install build tool
+uv tool install maturin
+
+# Build and install
+maturin develop --features python
+
+# Verify
+python -c "import mini_ros; print('✅ miniROS Python ready!')"
+```
+
+### Alternative: Using pip
+
 ```bash
 # Install build tool
 pip install maturin
 
-# Build and install
+# Build and install  
 maturin develop --features python
 
 # Verify

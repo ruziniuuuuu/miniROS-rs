@@ -23,9 +23,31 @@ miniROS now provides **Python bindings** that offer a **ROS2-compatible API**, a
 
 ### Build and Install
 
+#### Recommended: Using uv (10-100x faster than pip)
+
 ```bash
 # Clone the repository
-git clone https://github.com/ChenyuCao/miniROS-rs.git
+git clone https://github.com/ruziniuuuuu/miniROS-rs.git
+cd miniROS-rs
+
+# Install uv - extremely fast Python package manager written in Rust
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install maturin (Python-Rust build tool)
+uv tool install maturin
+
+# Build and install in development mode
+maturin develop --features python
+
+# Verify installation
+python -c "import mini_ros; print('miniROS version:', mini_ros.__version__)"
+```
+
+#### Alternative: Using pip
+
+```bash
+# Clone the repository
+git clone https://github.com/ruziniuuuuu/miniROS-rs.git
 cd miniROS-rs
 
 # Install maturin (Python-Rust build tool)
