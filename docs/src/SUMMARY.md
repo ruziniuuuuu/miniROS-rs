@@ -12,3 +12,6 @@
 
 # API Reference
 - [API Documentation](./api.md)
+
+# Python Bindings
+- [Python Bindings](./python-bindings.md)

@@ -5,6 +5,8 @@ edition = "2024"
 authors = ["Chenyu Cao <ruziniuuuuu@gmail.com>"]
 description = "A high-performance, cross-platform ROS2-like middleware implementation"
 license = "MIT OR Apache-2.0"
+homepage = "https://github.com/ruziniuuuuu/miniROS-rs"
+repository = "https://github.com/ruziniuuuuu/miniROS-rs"
 
 [lib]
 name = "mini_ros"

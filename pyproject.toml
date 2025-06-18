@@ -35,10 +35,10 @@ dependencies = []
 dynamic = ["version"]
 
 [project.urls]
-Homepage = "https://github.com/ChenyuCao/miniROS-rs"
-Repository = "https://github.com/ChenyuCao/miniROS-rs"
-Documentation = "https://miniros-rs.readthedocs.io"
-"Bug Tracker" = "https://github.com/ChenyuCao/miniROS-rs/issues"
+Homepage = "https://github.com/ruziniuuuuu/miniROS-rs"
+Repository = "https://github.com/ruziniuuuuu/miniROS-rs"
+Documentation = "https://github.com/ruziniuuuuu/miniROS-rs/tree/main/docs"
+"Bug Tracker" = "https://github.com/ruziniuuuuu/miniROS-rs/issues"
 
 [project.optional-dependencies]
 visualization = []

@@ -6,6 +6,7 @@ A high-performance, cross-platform ROS2-like middleware written in Rust, focusin
 
 - 🚀 **High Performance**: Built on Tokio async runtime with support for concurrent message processing
 - 🌐 **Cross-Platform**: Supports Linux, macOS, and Windows
+- 🐍 **Python Bindings**: ROS2-compatible Python API powered by PyO3
 - 🔗 **Multiple Transports**: UDP and TCP transport support
 - 🔍 **Auto Discovery**: Multicast-based node and service discovery
 - 📨 **Pub/Sub**: Decoupled message passing mechanism
@@ -194,6 +195,77 @@ async fn main() -> Result<()> {
     Ok(())
 }
 ```
+
+## Python API
+
+MiniROS provides Python bindings with ROS2-compatible syntax:
+
+### Installation
+
+```bash
+# Install Python dependencies
+pip install maturin
+
+# Build and install Python package
+maturin develop --features python
+```
+
+### Python Examples
+
+```python
+#!/usr/bin/env python3
+import mini_ros
+import time
+
+# Publisher
+def publisher_example():
+    mini_ros.init()
+    node = mini_ros.Node('talker')
+    pub = node.create_publisher(mini_ros.String, 'chatter', 10)
+    
+    msg = mini_ros.String()
+    i = 0
+    while mini_ros.ok():
+        msg.data = f'Hello World: {i}'
+        pub.publish(msg)
+        node.get_logger().info(f'Publishing: "{msg.data}"')
+        i += 1
+        time.sleep(1)
+    
+    node.destroy_node()
+    mini_ros.shutdown()
+
+# Subscriber
+class MinimalSubscriber(mini_ros.Node):
+    def __init__(self):
+        super().__init__('listener')
+        self.subscription = self.create_subscription(
+            mini_ros.String, 'chatter', self.callback, 10)
+
+    def callback(self, msg):
+        self.get_logger().info(f'I heard: "{msg.data}"')
+
+def subscriber_example():
+    mini_ros.init()
+    node = MinimalSubscriber()
+    mini_ros.spin(node)
+    node.destroy_node()
+    mini_ros.shutdown()
+```
+
+### Run Python Examples
+
+```bash
+# Basic examples
+python python/examples/talker.py
+python python/examples/listener.py
+
+# Advanced examples
+python python/examples/demo_all.py            # Comprehensive demo
+python python/examples/number_publisher.py    # Multi-type messages
+```
+
+For complete Python documentation, see **[PYTHON_USAGE.md](PYTHON_USAGE.md)**.
 
 ## Running Examples
 
