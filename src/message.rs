@@ -124,7 +124,9 @@ mod tests {
             data: "test".to_string(),
         };
         let int_msg = Int32Msg { data: 42 };
-        let float_msg = Float64Msg { data: std::f64::consts::PI };
+        let float_msg = Float64Msg {
+            data: std::f64::consts::PI,
+        };
         let bool_msg = BoolMsg { data: true };
         let empty_msg = EmptyMsg;
 

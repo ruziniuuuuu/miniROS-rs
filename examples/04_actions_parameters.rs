@@ -67,11 +67,15 @@ async fn main() -> Result<()> {
         info!("🔋 Robot Active: {}", is_active);
     }
 
-    if let Some(ParameterValue::BoolArray(sensor_states)) = param_client.get_parameter("robot.sensors.enabled")? {
+    if let Some(ParameterValue::BoolArray(sensor_states)) =
+        param_client.get_parameter("robot.sensors.enabled")?
+    {
         info!("📡 Sensors: {:?}", sensor_states);
     }
 
-    if let Some(ParameterValue::StringArray(points)) = param_client.get_parameter("robot.waypoints")? {
+    if let Some(ParameterValue::StringArray(points)) =
+        param_client.get_parameter("robot.waypoints")?
+    {
         info!("🗺️  Waypoints: {:?}", points);
     }
 
@@ -102,7 +106,9 @@ async fn main() -> Result<()> {
         );
     }
 
-    if let Some(ParameterValue::String(current_task)) = param_client.get_parameter("robot.current_task")? {
+    if let Some(ParameterValue::String(current_task)) =
+        param_client.get_parameter("robot.current_task")?
+    {
         info!("🔄 Current Task: {}", current_task);
     }
 
