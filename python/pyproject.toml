@@ -21,10 +21,51 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
+# Development dependencies for testing
+dev = [
+    "pytest>=6.0",
+    "pytest-asyncio>=0.18",
+    "pytest-timeout>=2.0",
+    "pytest-cov>=3.0",
+]
+# Examples have no extra dependencies
 examples = []
 
 [project.urls]
 Homepage = "https://github.com/ruziniuuuuu/miniROS-rs"
 Repository = "https://github.com/ruziniuuuuu/miniROS-rs"
+
+# Pytest configuration
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = [
+    "-ra",  # Show short test summary info for all tests
+    "-q",   # Quiet mode
+    "--strict-markers",  # Treat unknown markers as errors
+    "--disable-warnings",  # Disable warnings for cleaner output
+]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "performance: marks tests as performance tests",
+]
+timeout = 30  # Global timeout for tests
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["mini_ros"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
 
 # This is a workspace member - configuration inherited from root 
