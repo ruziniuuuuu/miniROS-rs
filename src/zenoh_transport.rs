@@ -7,11 +7,11 @@
 use crate::error::{MiniRosError, Result};
 use crate::message::Message;
 use crossbeam_channel::{Receiver, Sender, unbounded};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::sync::RwLock;
-use serde::{Deserialize, Serialize};
 
 // Type alias for complex subscriber map
 type SubscriberMap = HashMap<String, (Sender<Vec<u8>>, String)>;
@@ -101,8 +101,7 @@ impl ZenohTransport {
                         if let Some(payload_start) = msg_str.find(": ") {
                             let payload = &buf[payload_start + 2..len];
                             if let Ok(message) = bincode::deserialize::<T>(payload) {
-                                let serialized =
-                                    bincode::serialize(&message).unwrap_or_default();
+                                let serialized = bincode::serialize(&message).unwrap_or_default();
                                 let _ = sender_clone.send(serialized);
                             }
                         }

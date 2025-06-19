@@ -280,10 +280,6 @@ fn spin(_node: &Node) -> PyResult<()> {
     loop {
         std::thread::sleep(std::time::Duration::from_millis(100));
         // Check for interrupts
-        Python::with_gil(|py| {
-            if py.check_signals().is_err() {
-                
-            }
-        });
+        Python::with_gil(|py| if py.check_signals().is_err() {});
     }
 }

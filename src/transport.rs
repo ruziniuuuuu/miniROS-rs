@@ -34,16 +34,17 @@ impl MessageBroker {
             let mut sent_count = 0;
             // Remove dead subscribers while sending
             let mut active_subscribers = Vec::new();
-            
+
             for sender in subscribers.iter() {
                 if sender.send(data.clone()).is_ok() {
                     active_subscribers.push(sender.clone());
                     sent_count += 1;
                 }
             }
-            
+
             // Update the subscriber list with only active ones
-            self.subscribers.insert(topic.to_string(), active_subscribers);
+            self.subscribers
+                .insert(topic.to_string(), active_subscribers);
             Ok(sent_count)
         } else {
             Ok(0)
@@ -53,12 +54,12 @@ impl MessageBroker {
     /// Subscribe to a topic
     pub fn subscribe(&self, topic: &str) -> Receiver<Vec<u8>> {
         let (tx, rx) = unbounded();
-        
+
         self.subscribers
             .entry(topic.to_string())
             .or_default()
             .push(tx);
-        
+
         rx
     }
 

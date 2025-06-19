@@ -61,7 +61,7 @@ impl<T: Message> Publisher<T> {
                 let transport = self.context.inner.transport.read();
                 transport.broker().publish(&self.topic, data.clone())?
             }; // Lock is released here
-            
+
             if sent_count > 0 {
                 tracing::debug!(
                     "Successfully published message to {} local subscribers",
@@ -80,13 +80,13 @@ impl<T: Message> Publisher<T> {
             if !remote_subscribers.is_empty() {
                 let mut remote_sent = 0;
                 let mut remote_failed = 0;
-                
+
                 // Collect all endpoints first to avoid holding lock across await
                 let endpoints: Vec<String> = remote_subscribers
                     .iter()
                     .map(|(_, topic_info)| topic_info.endpoint.clone())
                     .collect();
-                
+
                 for endpoint in endpoints {
                     // For each endpoint, send without holding the transport lock across await
                     // Note: This is a simplified approach - in practice, we'd want better
@@ -97,7 +97,11 @@ impl<T: Message> Publisher<T> {
                                 match socket.send_to(&data, addr).await {
                                     Ok(_) => remote_sent += 1,
                                     Err(e) => {
-                                        tracing::debug!("Failed to send to remote subscriber {}: {}", endpoint, e);
+                                        tracing::debug!(
+                                            "Failed to send to remote subscriber {}: {}",
+                                            endpoint,
+                                            e
+                                        );
                                         remote_failed += 1;
                                     }
                                 }
@@ -112,7 +116,7 @@ impl<T: Message> Publisher<T> {
                         }
                     }
                 }
-                
+
                 if remote_sent > 0 {
                     tracing::debug!("Successfully sent to {} remote subscribers", remote_sent);
                 }

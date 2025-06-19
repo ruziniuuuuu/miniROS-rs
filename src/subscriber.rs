@@ -69,9 +69,9 @@ impl<T: Message> Subscriber<T> {
                     Ok(Some(message))
                 }
                 Err(crossbeam_channel::TryRecvError::Empty) => Ok(None),
-                Err(crossbeam_channel::TryRecvError::Disconnected) => {
-                    Err(MiniRosError::NetworkError("Receiver disconnected".to_string()))
-                }
+                Err(crossbeam_channel::TryRecvError::Disconnected) => Err(
+                    MiniRosError::NetworkError("Receiver disconnected".to_string()),
+                ),
             }
         } else {
             Ok(None)
@@ -132,7 +132,7 @@ impl<T: Message> Clone for Subscriber<T> {
 
         // Start message processing for the cloned subscriber
         subscriber.start_message_processing();
-        
+
         subscriber
     }
 }

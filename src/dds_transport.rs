@@ -389,13 +389,17 @@ impl DdsTransport {
                 // Drop read lock and create new publisher
                 drop(publishers);
                 let new_publisher = self.create_publisher::<T>(topic).await?;
-                
+
                 // Cache the publisher for future use
-                self.participant.publishers.write().await.insert(topic.to_string(), new_publisher.clone());
+                self.participant
+                    .publishers
+                    .write()
+                    .await
+                    .insert(topic.to_string(), new_publisher.clone());
                 new_publisher
             }
         };
-        
+
         // Publish the message
         publisher.publish(message).await
     }

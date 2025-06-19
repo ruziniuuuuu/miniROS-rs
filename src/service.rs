@@ -39,11 +39,7 @@ pub struct Service<Req: Message, Res: Message> {
 
 impl<Req: Message, Res: Message> Service<Req, Res> {
     /// Create a new service provider
-    pub(crate) async fn new<F>(
-        name: &str,
-        callback: F,
-        context: Context,
-    ) -> Result<Self>
+    pub(crate) async fn new<F>(name: &str, callback: F, context: Context) -> Result<Self>
     where
         F: Fn(Req) -> Result<Res> + Send + Sync + 'static,
     {
@@ -108,7 +104,8 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
 
     /// Call the service with a request and wait for response
     pub async fn call(&self, request: Req) -> Result<Res> {
-        self.call_with_timeout(request, Duration::from_secs(10)).await
+        self.call_with_timeout(request, Duration::from_secs(10))
+            .await
     }
 
     /// Call the service with a request and custom timeout
@@ -127,7 +124,7 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
         // 4. Return response
 
         tracing::debug!("Service call to {} (simplified mode)", self.service_name);
-        
+
         // Return an error for now since we don't have full service implementation
         Err(MiniRosError::ServiceNotFound(self.service_name.clone()))
     }
@@ -148,14 +145,14 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
     /// Wait for the service to become available
     pub async fn wait_for_service(&self, timeout_duration: Duration) -> Result<()> {
         let start = std::time::Instant::now();
-        
+
         while start.elapsed() < timeout_duration {
             if self.is_available().await {
                 return Ok(());
             }
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
-        
+
         Err(MiniRosError::ServiceTimeout(self.service_name.clone()))
     }
 }
@@ -164,7 +161,7 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
 mod tests {
     use super::*;
     use crate::core::Context;
-    use crate::message::{StringMsg, Int32Msg};
+    use crate::message::{Int32Msg, StringMsg};
 
     #[tokio::test]
     async fn test_service_creation() {
