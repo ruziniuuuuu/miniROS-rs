@@ -1,0 +1,30 @@
+[project]
+name = "mini-ros-python"
+description = "Python bindings for miniROS - ROS2 compatible minimal middleware"
+version = "0.1.2"
+requires-python = ">=3.8"
+authors = [
+    {name = "Chenyu Cao", email = "ruziniuuuuu@gmail.com"},
+]
+license = {text = "MIT OR Apache-2.0"}
+readme = "README.md"
+keywords = ["robotics", "ros2", "python", "bindings"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# No runtime dependencies - keep it minimal
+dependencies = []
+
+[project.optional-dependencies]
+examples = []
+
+[project.urls]
+Homepage = "https://github.com/ruziniuuuuu/miniROS-rs"
+Repository = "https://github.com/ruziniuuuuu/miniROS-rs"
+
+# This is a workspace member - configuration inherited from root 

@@ -14,6 +14,10 @@ build/
 venv/
 .env
 
+# uv package manager
+.uv-cache/
+# Keep uv.lock for reproducible builds
+
 # Documentation build output
 docs/book/
 

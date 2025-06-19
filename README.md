@@ -48,6 +48,12 @@ async fn main() -> Result<()> {
 ### Python (ROS2 Compatible)
 
 ```bash
+# Fast install with uv (recommended)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv sync --dev
+uv run maturin develop --features python
+
+# Or traditional method
 pip install maturin
 maturin develop --features python
 ```

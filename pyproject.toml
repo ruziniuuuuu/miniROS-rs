@@ -41,6 +41,10 @@ Documentation = "https://github.com/ruziniuuuuu/miniROS-rs/tree/main/docs"
 "Bug Tracker" = "https://github.com/ruziniuuuuu/miniROS-rs/issues"
 
 [project.optional-dependencies]
+dev = [
+    "maturin>=1.0,<2.0",
+    "pytest>=6.0",
+]
 visualization = []
 
 [tool.maturin]
@@ -54,4 +58,19 @@ addopts = "-ra -q"
 testpaths = [
     "tests",
     "python/tests",
+]
+
+[tool.uv]
+# Use faster universal resolution for cross-platform compatibility
+resolution = "highest"
+# Enable pre-release versions for faster iteration
+prerelease = "allow"
+# Use global cache for faster builds
+cache-dir = ".uv-cache"
+
+[tool.uv.workspace]
+# Enable workspace mode for better dependency management
+members = [
+    ".",
+    "python",
 ] 
