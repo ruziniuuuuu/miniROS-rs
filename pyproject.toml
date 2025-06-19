@@ -32,7 +32,7 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
 ]
 dependencies = []
-version = "0.1.2"
+version = "0.1.4"
 
 [project.urls]
 Homepage = "https://github.com/ruziniuuuuu/miniROS-rs"
