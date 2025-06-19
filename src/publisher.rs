@@ -22,6 +22,7 @@ pub struct Publisher<T: Message> {
 
 impl<T: Message> Publisher<T> {
     /// Create a new publisher for the given topic
+    #[allow(clippy::await_holding_lock)]
     pub(crate) async fn new(topic: &str, endpoint: &str, context: Context) -> Result<Self> {
         tracing::debug!(
             "Creating publisher for topic: {} on endpoint: {}",
@@ -31,8 +32,9 @@ impl<T: Message> Publisher<T> {
 
         // Start listening on the endpoint for subscriber connections
         {
-            let transport = context.inner.transport.read();
-            let _receiver = transport.listen(endpoint).await?;
+            let transport = context.inner.transport.clone();
+            let transport_guard = transport.read();
+            let _receiver = transport_guard.listen(endpoint).await?;
         }
 
         Ok(Publisher {
@@ -45,6 +47,7 @@ impl<T: Message> Publisher<T> {
     }
 
     /// Publish a message to all subscribers
+    #[allow(clippy::await_holding_lock)]
     pub async fn publish(&self, message: &T) -> Result<()> {
         // Increment sequence number
         let seq = self.sequence.fetch_add(1, Ordering::Relaxed);
@@ -56,31 +59,28 @@ impl<T: Message> Publisher<T> {
             .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
 
         // Find all subscribers for this topic
-        let discovery = self.context.inner.discovery.read();
-        let subscribers = discovery.get_subscribers(&self.topic);
+        let subscribers = {
+            let discovery = self.context.inner.discovery.read();
+            discovery.get_subscribers(&self.topic)
+        };
 
         if subscribers.is_empty() {
             tracing::debug!("No subscribers found for topic: {}", self.topic);
             return Ok(());
         }
 
-        // Send to all subscribers
-        let transport = self.context.inner.transport.read();
-        let mut send_futures = Vec::new();
-
-        for (_node_info, topic_info) in subscribers {
+        // Send to all subscribers concurrently
+        let mut results = Vec::new();
+        for (_node_info, topic_info) in &subscribers {
             let endpoint = topic_info.endpoint.clone();
             let data_clone = data.clone();
 
-            // Create future for sending to this subscriber
-            let transport_ref = &*transport;
-            let future = async move { transport_ref.send(&endpoint, &data_clone).await };
-
-            send_futures.push(future);
+            // Send to each subscriber
+            let transport = self.context.inner.transport.clone();
+            let transport_guard = transport.read();
+            let result = transport_guard.send(&endpoint, &data_clone).await;
+            results.push(result);
         }
-
-        // Send to all subscribers concurrently
-        let results = futures::future::join_all(send_futures).await;
 
         // Check for any errors
         let mut error_count = 0;
@@ -94,9 +94,13 @@ impl<T: Message> Publisher<T> {
         if error_count > 0 {
             tracing::warn!("Failed to send to {} subscribers", error_count);
         } else {
+            let subscriber_count = {
+                let discovery = self.context.inner.discovery.read();
+                discovery.get_subscribers(&self.topic).len()
+            };
             tracing::debug!(
                 "Successfully published message to {} subscribers",
-                discovery.get_subscribers(&self.topic).len()
+                subscriber_count
             );
         }
 

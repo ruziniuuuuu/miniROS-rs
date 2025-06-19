@@ -58,6 +58,7 @@ pub struct DomainParticipant {
     socket: Arc<UdpSocket>,
     publishers: Arc<RwLock<HashMap<String, DdsPublisher>>>,
     subscribers: Arc<RwLock<HashMap<String, DdsSubscriber>>>,
+    #[allow(dead_code)] // Reserved for future discovery enhancements
     discovery_port: u16,
 }
 
@@ -163,6 +164,7 @@ impl DomainParticipant {
 pub struct DdsPublisher {
     socket: Arc<UdpSocket>,
     topic: String,
+    #[allow(dead_code)] // Reserved for future QoS implementation
     qos: QosPolicy,
     domain_id: u32,
     sequence_number: Arc<RwLock<u64>>,
@@ -236,6 +238,7 @@ impl DdsPublisher {
 pub struct DdsSubscriber {
     receiver: Receiver<Vec<u8>>,
     topic: String,
+    #[allow(dead_code)] // Reserved for future QoS implementation
     qos: QosPolicy,
     _domain_id: u32,
 }
@@ -253,18 +256,11 @@ impl DdsSubscriber {
         // Spawn receiver task
         tokio::spawn(async move {
             let mut buffer = [0u8; 65536];
-            loop {
-                match socket.recv_from(&mut buffer).await {
-                    Ok((len, _addr)) => {
-                        if let Ok(dds_msg) = bincode::deserialize::<DdsMessage>(&buffer[..len]) {
-                            if dds_msg.topic == topic_filter {
-                                if sender.send(dds_msg.data).is_err() {
-                                    break; // Receiver dropped
-                                }
-                            }
-                        }
+            while let Ok((len, _addr)) = socket.recv_from(&mut buffer).await {
+                if let Ok(dds_msg) = bincode::deserialize::<DdsMessage>(&buffer[..len]) {
+                    if dds_msg.topic == topic_filter && sender.send(dds_msg.data).is_err() {
+                        break; // Receiver dropped
                     }
-                    Err(_) => break,
                 }
             }
         });
@@ -296,10 +292,10 @@ impl DdsSubscriber {
     }
 
     /// Set up callback for incoming messages
-    pub fn on_message<T: Message, F>(&self, mut callback: F) -> Result<()>
+    pub fn on_message<T, F>(&self, mut callback: F) -> Result<()>
     where
+        T: Message + 'static,
         F: FnMut(T) + Send + 'static,
-        T: 'static,
     {
         let receiver = self.receiver.clone();
         let topic = self.topic.clone();

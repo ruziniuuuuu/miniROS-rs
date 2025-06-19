@@ -24,6 +24,7 @@ pub struct Subscriber<T: Message> {
 
 impl<T: Message> Subscriber<T> {
     /// Create a new subscriber for the given topic
+    #[allow(clippy::await_holding_lock)]
     pub(crate) async fn new(topic: &str, endpoint: &str, context: Context) -> Result<Self> {
         tracing::debug!(
             "Creating subscriber for topic: {} on endpoint: {}",
@@ -37,8 +38,9 @@ impl<T: Message> Subscriber<T> {
 
         // Start listening on the transport
         let transport_receiver = {
-            let transport = context.inner.transport.read();
-            transport.listen(endpoint).await?
+            let transport = context.inner.transport.clone();
+            let transport_guard = transport.read();
+            transport_guard.listen(endpoint).await?
         };
 
         // Spawn background task to process incoming messages

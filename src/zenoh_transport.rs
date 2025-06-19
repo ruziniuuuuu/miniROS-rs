@@ -11,9 +11,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::sync::RwLock;
+use serde::{Deserialize, Serialize};
 
-/// Zenoh-style transport configuration
-#[derive(Clone, Debug)]
+// Type alias for complex subscriber map
+type SubscriberMap = HashMap<String, (Sender<Vec<u8>>, String)>;
+
+/// Configuration for Zenoh-style transport
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZenohConfig {
     pub multicast_address: String,
     pub port_range: (u16, u16),
@@ -22,8 +26,8 @@ pub struct ZenohConfig {
 impl Default for ZenohConfig {
     fn default() -> Self {
         Self {
-            multicast_address: "224.0.0.224".to_string(),
-            port_range: (7447, 7500),
+            multicast_address: "239.255.0.1".to_string(),
+            port_range: (7400, 7500),
         }
     }
 }
@@ -32,7 +36,7 @@ impl Default for ZenohConfig {
 pub struct ZenohTransport {
     socket: Arc<UdpSocket>,
     publishers: Arc<RwLock<HashMap<String, ZenohPublisher<Vec<u8>>>>>,
-    subscribers: Arc<RwLock<HashMap<String, (Sender<Vec<u8>>, String)>>>,
+    subscribers: Arc<RwLock<SubscriberMap>>,
     config: ZenohConfig,
 }
 
@@ -89,25 +93,20 @@ impl ZenohTransport {
 
         tokio::spawn(async move {
             let mut buf = [0u8; 65536];
-            loop {
-                match socket.recv_from(&mut buf).await {
-                    Ok((len, _addr)) => {
-                        // Simple topic filtering based on message prefix
-                        if let Ok(msg_str) = std::str::from_utf8(&buf[..len]) {
-                            if msg_str.starts_with(&format!("{}: ", topic_filter)) {
-                                // Extract payload after topic prefix
-                                if let Some(payload_start) = msg_str.find(": ") {
-                                    let payload = &buf[payload_start + 2..len];
-                                    if let Ok(message) = bincode::deserialize::<T>(payload) {
-                                        let serialized =
-                                            bincode::serialize(&message).unwrap_or_default();
-                                        let _ = sender_clone.send(serialized);
-                                    }
-                                }
+            while let Ok((len, _addr)) = socket.recv_from(&mut buf).await {
+                // Simple topic filtering based on message prefix
+                if let Ok(msg_str) = std::str::from_utf8(&buf[..len]) {
+                    if msg_str.starts_with(&format!("{}: ", topic_filter)) {
+                        // Extract payload after topic prefix
+                        if let Some(payload_start) = msg_str.find(": ") {
+                            let payload = &buf[payload_start + 2..len];
+                            if let Ok(message) = bincode::deserialize::<T>(payload) {
+                                let serialized =
+                                    bincode::serialize(&message).unwrap_or_default();
+                                let _ = sender_clone.send(serialized);
                             }
                         }
                     }
-                    Err(_) => break,
                 }
             }
         });

@@ -66,6 +66,7 @@ impl Context {
     }
 
     /// Initialize the context and start background services
+    #[allow(clippy::await_holding_lock)]
     pub async fn init(&self) -> Result<()> {
         tracing::info!(
             "Initializing MiniROS context with domain_id: {}",
@@ -74,22 +75,23 @@ impl Context {
 
         // Start discovery service
         {
-            let mut discovery = self.inner.discovery.write();
-            discovery.start().await?;
+            let discovery = self.inner.discovery.clone();
+            let mut discovery_guard = discovery.write();
+            discovery_guard.start().await?;
         }
 
         // Initialize transport based on feature flags
         #[cfg(feature = "tcp-transport")]
         {
-            let mut transport = self.inner.transport.write();
-            transport.start().await?;
+            let transport = self.inner.transport.clone();
+            let mut transport_guard = transport.write();
+            transport_guard.start().await?;
         }
 
         #[cfg(feature = "dds-transport")]
         {
             let dds_transport = DdsTransport::new(self.domain_id()).await?;
-            let mut transport_lock = self.inner.dds_transport.write();
-            *transport_lock = Some(dds_transport);
+            *self.inner.dds_transport.write() = Some(dds_transport);
         }
 
         tracing::info!("MiniROS context initialized successfully");
@@ -97,29 +99,33 @@ impl Context {
     }
 
     /// Shutdown the context and clean up resources
+    #[allow(clippy::await_holding_lock)]
     pub async fn shutdown(&self) -> Result<()> {
         tracing::info!("Shutting down MiniROS context");
 
         // Stop discovery service
         {
-            let mut discovery = self.inner.discovery.write();
-            discovery.stop().await?;
+            let discovery = self.inner.discovery.clone();
+            let mut discovery_guard = discovery.write();
+            discovery_guard.stop().await?;
         }
 
         // Stop transport based on feature flags
         #[cfg(feature = "tcp-transport")]
         {
-            let mut transport = self.inner.transport.write();
-            transport.stop().await?;
+            let transport = self.inner.transport.clone();
+            let mut transport_guard = transport.write();
+            transport_guard.stop().await?;
         }
 
         #[cfg(feature = "dds-transport")]
         {
-            let mut transport_lock = self.inner.dds_transport.write();
+            let transport_lock = self.inner.dds_transport.read();
             if let Some(dds_transport) = transport_lock.as_ref() {
                 dds_transport.shutdown().await?;
             }
-            *transport_lock = None;
+            drop(transport_lock);
+            *self.inner.dds_transport.write() = None;
         }
 
         tracing::info!("MiniROS context shutdown complete");

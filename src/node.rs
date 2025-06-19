@@ -185,13 +185,14 @@ impl Node {
         // In a real implementation, this might process callbacks, etc.
         tokio::signal::ctrl_c()
             .await
-            .map_err(|e| MiniRosError::IoError(e))?;
+            .map_err(MiniRosError::IoError)?;
 
         tracing::info!("Received shutdown signal");
         Ok(())
     }
 
     /// Announce node presence to discovery service
+    #[allow(clippy::await_holding_lock)]
     async fn announce(&self) -> Result<()> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -209,8 +210,11 @@ impl Node {
             services: self.services.clone(),
         };
 
-        let discovery = self.context.inner.discovery.read();
-        discovery.announce_node(node_info).await?;
+        {
+            let discovery = self.context.inner.discovery.clone();
+            let discovery_guard = discovery.read();
+            discovery_guard.announce_node(node_info).await?;
+        }
 
         Ok(())
     }

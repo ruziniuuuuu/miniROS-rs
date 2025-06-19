@@ -41,6 +41,7 @@ pub struct Service<Req: Message, Res: Message> {
 
 impl<Req: Message, Res: Message> Service<Req, Res> {
     /// Create a new service provider
+    #[allow(clippy::await_holding_lock)]
     pub(crate) async fn new<F>(
         name: &str,
         endpoint: &str,
@@ -56,8 +57,9 @@ impl<Req: Message, Res: Message> Service<Req, Res> {
 
         // Start listening for incoming requests
         let transport_receiver = {
-            let transport = context.inner.transport.read();
-            transport.listen(endpoint).await?
+            let transport = context.inner.transport.clone();
+            let transport_guard = transport.read();
+            transport_guard.listen(endpoint).await?
         };
 
         // Spawn background task to handle requests
@@ -206,6 +208,7 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
     }
 
     /// Call the service with a timeout
+    #[allow(clippy::await_holding_lock)]
     pub async fn call_with_timeout(&self, request: Req, timeout_duration: Duration) -> Result<Res> {
         timeout(timeout_duration, self.call_internal(request))
             .await
@@ -214,20 +217,23 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
             })?
     }
 
+    #[allow(clippy::await_holding_lock)]
     async fn call_internal(&self, request: Req) -> Result<Res> {
         tracing::debug!("Calling service: {}", self.service_name);
 
         // Find service providers
-        let discovery = self.context.inner.discovery.read();
-        let providers = discovery.get_service_providers(&self.service_name);
+        let (_providers, service_endpoint) = {
+            let discovery = self.context.inner.discovery.read();
+            let providers = discovery.get_service_providers(&self.service_name);
 
-        if providers.is_empty() {
-            return Err(MiniRosError::ServiceNotFound(self.service_name.clone()));
-        }
+            if providers.is_empty() {
+                return Err(MiniRosError::ServiceNotFound(self.service_name.clone()));
+            }
 
-        // Use the first available provider
-        let (_node_info, service_info) = &providers[0];
-        let service_endpoint = &service_info.endpoint;
+            let (_node_info, service_info) = &providers[0];
+            let service_endpoint = service_info.endpoint.clone();
+            (providers, service_endpoint)
+        };
 
         // Create unique request ID
         let request_id = Uuid::new_v4();
@@ -241,8 +247,11 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
             .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
 
         // Send request
-        let transport = self.context.inner.transport.read();
-        transport.send(service_endpoint, &request_bytes).await?;
+        {
+            let transport = self.context.inner.transport.clone();
+            let transport_guard = transport.read();
+            transport_guard.send(&service_endpoint, &request_bytes).await?;
+        }
 
         // For now, return a dummy response since we don't have full response handling
         // In a complete implementation, we'd wait for the response with the matching request_id

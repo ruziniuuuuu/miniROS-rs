@@ -282,7 +282,7 @@ fn spin(_node: &Node) -> PyResult<()> {
         // Check for interrupts
         Python::with_gil(|py| {
             if py.check_signals().is_err() {
-                return;
+                
             }
         });
     }

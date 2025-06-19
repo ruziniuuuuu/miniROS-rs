@@ -28,6 +28,12 @@ pub struct UdpTransport {
     receivers: Arc<DashMap<String, Sender<Vec<u8>>>>,
 }
 
+impl Default for UdpTransport {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UdpTransport {
     pub fn new() -> Self {
         UdpTransport {
@@ -75,17 +81,12 @@ impl Transport for UdpTransport {
 
         tokio::spawn(async move {
             let mut buffer = [0u8; 65536];
-            loop {
-                match socket.recv(&mut buffer).await {
-                    Ok(len) => {
-                        let data = buffer[..len].to_vec();
-                        if let Some(sender) = receivers_clone.get(&endpoint_clone) {
-                            if sender.send(data).is_err() {
-                                break; // Receiver dropped
-                            }
-                        }
+            while let Ok(len) = socket.recv(&mut buffer).await {
+                let data = buffer[..len].to_vec();
+                if let Some(sender) = receivers_clone.get(&endpoint_clone) {
+                    if sender.send(data).is_err() {
+                        break; // Receiver dropped
                     }
-                    Err(_) => break,
                 }
             }
 
@@ -105,6 +106,12 @@ impl Transport for UdpTransport {
 /// TCP-based transport for reliable communication
 pub struct TcpTransport {
     listeners: Arc<DashMap<String, mpsc::UnboundedSender<()>>>,
+}
+
+impl Default for TcpTransport {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TcpTransport {
