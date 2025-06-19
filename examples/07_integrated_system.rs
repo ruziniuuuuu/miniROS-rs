@@ -63,7 +63,7 @@ async fn main() -> mini_ros::error::Result<()> {
     let mut robot_x = 0.0;
     let mut robot_y = 0.0;
     let mut robot_yaw = 0.0;
-    let waypoints = vec![
+    let waypoints = [
         [2.0, 0.0],
         [2.0, 2.0],
         [0.0, 2.0],
@@ -101,16 +101,16 @@ async fn main() -> mini_ros::error::Result<()> {
             let target_x = waypoints[current_waypoint][0];
             let target_y = waypoints[current_waypoint][1];
 
-            let dx = target_x - robot_x;
-            let dy = target_y - robot_y;
-            let distance = ((dx * dx + dy * dy) as f64).sqrt();
+            let dx: f64 = target_x - robot_x;
+            let dy: f64 = target_y - robot_y;
+            let distance = (dx * dx + dy * dy).sqrt();
 
             if distance > 0.1 {
                 // Move towards target
                 let speed = 0.05;
                 robot_x += dx / distance * speed;
                 robot_y += dy / distance * speed;
-                robot_yaw = (dy as f64).atan2(dx as f64);
+                robot_yaw = dy.atan2(dx);
             } else {
                 // Reached waypoint
                 current_waypoint += 1;

@@ -32,6 +32,7 @@ impl<T: Message> Publisher<T> {
     }
 
     /// Publish a message to all subscribers
+    #[allow(clippy::await_holding_lock)]
     pub async fn publish(&self, message: &T) -> Result<()> {
         // Increment sequence number
         let seq = self.sequence.fetch_add(1, Ordering::Relaxed);
@@ -41,11 +42,17 @@ impl<T: Message> Publisher<T> {
         // Try DDS transport first if available
         #[cfg(feature = "dds-transport")]
         {
-            let dds_transport_lock = self.context.inner.dds_transport.read();
-            if let Some(dds_transport) = dds_transport_lock.as_ref() {
-                // Create a DDS publisher and publish the message
-                let dds_publisher = dds_transport.create_publisher::<T>(&self.topic).await?;
-                return dds_publisher.publish(message).await;
+            let has_dds_transport = {
+                let dds_transport_lock = self.context.inner.dds_transport.read();
+                dds_transport_lock.is_some()
+            };
+            if has_dds_transport {
+                let dds_transport_lock = self.context.inner.dds_transport.read();
+                if let Some(dds_transport) = dds_transport_lock.as_ref() {
+                    // Create a DDS publisher and publish the message
+                    let dds_publisher = dds_transport.create_publisher::<T>(&self.topic).await?;
+                    return dds_publisher.publish(message).await;
+                }
             }
         }
 
@@ -134,10 +141,16 @@ impl<T: Message> Publisher<T> {
                 .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
 
             // Use zenoh transport
-            let zenoh_transport_lock = self.context.inner.zenoh_transport.read();
-            if let Some(zenoh_transport) = zenoh_transport_lock.as_ref() {
-                zenoh_transport.publish(&self.topic, data).await?;
-                tracing::debug!("Published message via Zenoh transport");
+            let has_zenoh_transport = {
+                let zenoh_transport_lock = self.context.inner.zenoh_transport.read();
+                zenoh_transport_lock.is_some()
+            };
+            if has_zenoh_transport {
+                let zenoh_transport_lock = self.context.inner.zenoh_transport.read();
+                if let Some(zenoh_transport) = zenoh_transport_lock.as_ref() {
+                    zenoh_transport.publish(&self.topic, data).await?;
+                    tracing::debug!("Published message via Zenoh transport");
+                }
             } else {
                 tracing::warn!("No transport available for publishing");
             }

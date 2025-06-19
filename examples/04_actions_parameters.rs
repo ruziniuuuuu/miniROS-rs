@@ -55,34 +55,24 @@ async fn main() -> Result<()> {
     // === Read Parameters ===
     info!("\n🔍 Reading Configuration Parameters:");
 
-    if let Some(name) = param_client.get_parameter("robot.name")? {
-        if let ParameterValue::String(robot_name) = name {
-            info!("🤖 Robot Name: {}", robot_name);
-        }
+    if let Some(ParameterValue::String(robot_name)) = param_client.get_parameter("robot.name")? {
+        info!("🤖 Robot Name: {}", robot_name);
     }
 
-    if let Some(speed) = param_client.get_parameter("robot.max_speed")? {
-        if let ParameterValue::Float(max_speed) = speed {
-            info!("⚡ Max Speed: {:.1} m/s", max_speed);
-        }
+    if let Some(ParameterValue::Float(max_speed)) = param_client.get_parameter("robot.max_speed")? {
+        info!("⚡ Max Speed: {:.1} m/s", max_speed);
     }
 
-    if let Some(active) = param_client.get_parameter("robot.active")? {
-        if let ParameterValue::Bool(is_active) = active {
-            info!("🔋 Robot Active: {}", is_active);
-        }
+    if let Some(ParameterValue::Bool(is_active)) = param_client.get_parameter("robot.active")? {
+        info!("🔋 Robot Active: {}", is_active);
     }
 
-    if let Some(sensors) = param_client.get_parameter("robot.sensors.enabled")? {
-        if let ParameterValue::BoolArray(sensor_states) = sensors {
-            info!("📡 Sensors: {:?}", sensor_states);
-        }
+    if let Some(ParameterValue::BoolArray(sensor_states)) = param_client.get_parameter("robot.sensors.enabled")? {
+        info!("📡 Sensors: {:?}", sensor_states);
     }
 
-    if let Some(waypoints) = param_client.get_parameter("robot.waypoints")? {
-        if let ParameterValue::StringArray(points) = waypoints {
-            info!("🗺️  Waypoints: {:?}", points);
-        }
+    if let Some(ParameterValue::StringArray(points)) = param_client.get_parameter("robot.waypoints")? {
+        info!("🗺️  Waypoints: {:?}", points);
     }
 
     // === Parameter Updates Demo ===
@@ -101,25 +91,19 @@ async fn main() -> Result<()> {
 
     // Read updated values
     info!("\n📊 Updated Configuration:");
-    if let Some(speed) = param_client.get_parameter("robot.max_speed")? {
-        if let ParameterValue::Float(new_speed) = speed {
-            info!("🔄 New Max Speed: {:.1} m/s", new_speed);
-        }
+    if let Some(ParameterValue::Float(new_speed)) = param_client.get_parameter("robot.max_speed")? {
+        info!("🔄 New Max Speed: {:.1} m/s", new_speed);
     }
 
-    if let Some(active) = param_client.get_parameter("robot.active")? {
-        if let ParameterValue::Bool(is_active) = active {
-            info!(
-                "🔄 Robot State: {}",
-                if is_active { "Active" } else { "Standby" }
-            );
-        }
+    if let Some(ParameterValue::Bool(is_active)) = param_client.get_parameter("robot.active")? {
+        info!(
+            "🔄 Robot State: {}",
+            if is_active { "Active" } else { "Standby" }
+        );
     }
 
-    if let Some(task) = param_client.get_parameter("robot.current_task")? {
-        if let ParameterValue::String(current_task) = task {
-            info!("🔄 Current Task: {}", current_task);
-        }
+    if let Some(ParameterValue::String(current_task)) = param_client.get_parameter("robot.current_task")? {
+        info!("🔄 Current Task: {}", current_task);
     }
 
     // === Parameter Management ===

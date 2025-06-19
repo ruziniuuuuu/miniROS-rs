@@ -133,7 +133,7 @@ async fn main() -> mini_ros::error::Result<()> {
         viz_client.log_scalar("robot/battery_percentage", battery)?;
 
         let cpu_load = 40.0 + 20.0 * (t * 1.5).sin() + fastrand::f64() * 15.0;
-        viz_client.log_scalar("system/cpu_load", cpu_load.max(0.0).min(100.0))?;
+        viz_client.log_scalar("system/cpu_load", cpu_load.clamp(0.0, 100.0))?;
 
         let wifi_signal = -45.0 + 10.0 * (t * 0.5).cos() + fastrand::f64() * 5.0;
         viz_client.log_scalar("network/wifi_signal_dbm", wifi_signal)?;

@@ -39,6 +39,7 @@ async fn main() -> mini_ros::error::Result<()> {
     }
 }
 
+#[allow(dead_code)]
 async fn run_node_example() -> mini_ros::error::Result<()> {
     // Create and initialize node
     let mut node = Node::new("basic_node")?;

@@ -211,7 +211,7 @@ mod tests {
         );
         assert!(
             server
-                .set_parameter("test.float", ParameterValue::Float(3.14))
+                .set_parameter("test.float", ParameterValue::Float(std::f64::consts::PI))
                 .is_ok()
         );
         assert!(
@@ -231,7 +231,7 @@ mod tests {
         );
         assert_eq!(
             server.get_parameter("test.float").unwrap(),
-            Some(ParameterValue::Float(3.14))
+            Some(ParameterValue::Float(std::f64::consts::PI))
         );
         assert_eq!(
             server.get_parameter("test.string").unwrap(),

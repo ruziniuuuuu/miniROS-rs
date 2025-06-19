@@ -53,7 +53,7 @@ async fn main() -> mini_ros::error::Result<()> {
 
         // Log CPU usage
         let cpu_usage = 30.0 + 20.0 * (t * 0.8).sin() + fastrand::f64() * 10.0;
-        viz_client.log_scalar("system/cpu_usage", cpu_usage.max(0.0).min(100.0))?;
+        viz_client.log_scalar("system/cpu_usage", cpu_usage.clamp(0.0, 100.0))?;
 
         // Log status messages periodically
         if i % 5 == 0 {
