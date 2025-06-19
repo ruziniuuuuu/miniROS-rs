@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Talker Node Example
+Talker Example - miniROS Python API
 
-This example demonstrates a basic publisher node using miniROS Python API.
-The syntax is identical to ROS2 rclpy for easy migration.
+This example demonstrates basic publishing functionality.
+Similar to ROS2 rclpy tutorials.
 """
 
 import mini_ros
@@ -11,26 +11,35 @@ import time
 
 
 def main():
-    # Initialize miniROS (equivalent to rclpy.init())
+    # Initialize miniROS
     mini_ros.init()
     
     # Create node
     node = mini_ros.Node('talker')
     
-    # Create publisher 
-    publisher = node.create_publisher(mini_ros.String, 'chatter', 10)
+    # Create publisher
+    publisher = node.create_publisher(mini_ros.StringMessage, 'chatter', 10)
     
-    # Create message
-    msg = mini_ros.String()
+    # Get logger
+    logger = node.get_logger()
+    logger.info('Talker node started')
     
-    # Publish loop
-    i = 0
-    while mini_ros.ok():
-        msg.data = f'Hello World: {i}'
-        publisher.publish(msg)
-        node.get_logger().info(f'Publishing: "{msg.data}"')
-        i += 1
-        time.sleep(1)
+    # Publishing loop
+    count = 0
+    try:
+        while mini_ros.ok():
+            # Create and publish message
+            msg = mini_ros.StringMessage()
+            msg.data = f'Hello World: {count}'
+            
+            publisher.publish(msg)
+            logger.info(f'Publishing: "{msg.data}"')
+            
+            count += 1
+            time.sleep(1.0)
+            
+    except KeyboardInterrupt:
+        logger.info('Talker interrupted')
     
     # Cleanup
     node.destroy_node()

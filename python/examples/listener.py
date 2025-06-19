@@ -1,50 +1,46 @@
 #!/usr/bin/env python3
 """
-Listener Node Example
+Listener Example - miniROS Python API
 
-This example demonstrates a basic subscriber node using miniROS Python API.
-The syntax is identical to ROS2 rclpy for easy migration.
+This example demonstrates basic subscription functionality.
+Similar to ROS2 rclpy tutorials.
 """
 
 import mini_ros
 
 
-class MinimalSubscriber(mini_ros.Node):
-    """
-    Minimal subscriber node class
-    
-    This demonstrates object-oriented node design compatible with ROS2.
-    """
-
-    def __init__(self):
-        super().__init__('listener')
-        
-        # Create subscription
-        self.subscription = self.create_subscription(
-            mini_ros.String,
-            'chatter',
-            self.listener_callback,
-            10
-        )
-        self.subscription  # prevent unused variable warning
-
-    def listener_callback(self, msg):
-        """Callback function for incoming messages"""
-        self.get_logger().info(f'I heard: "{msg.data}"')
+def listener_callback(msg):
+    """Callback function for received messages"""
+    print(f'I heard: "{msg.data}"')
 
 
 def main():
     # Initialize miniROS
     mini_ros.init()
     
-    # Create subscriber node
-    minimal_subscriber = MinimalSubscriber()
+    # Create node
+    node = mini_ros.Node('listener')
     
-    # Spin the node
-    mini_ros.spin(minimal_subscriber)
+    # Create subscription
+    subscription = node.create_subscription(
+        mini_ros.StringMessage,
+        'chatter',
+        listener_callback,
+        10
+    )
+    
+    # Get logger
+    logger = node.get_logger()
+    logger.info('Listener node started, waiting for messages...')
+    
+    try:
+        # Spin to process callbacks
+        mini_ros.spin(node)
+    except KeyboardInterrupt:
+        logger.info('Listener interrupted')
     
     # Cleanup
-    minimal_subscriber.destroy_node()
+    node.destroy_node()
     mini_ros.shutdown()
 
 
