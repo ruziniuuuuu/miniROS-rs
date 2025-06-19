@@ -37,7 +37,7 @@ version = "0.1.2"
 [project.urls]
 Homepage = "https://github.com/ruziniuuuuu/miniROS-rs"
 Repository = "https://github.com/ruziniuuuuu/miniROS-rs"
-Documentation = "https://github.com/ruziniuuuuu/miniROS-rs/tree/main/docs"
+Documentation = "https://ruziniuuuuu.github.io/miniROS-rs/"
 "Bug Tracker" = "https://github.com/ruziniuuuuu/miniROS-rs/issues"
 
 [project.optional-dependencies]
