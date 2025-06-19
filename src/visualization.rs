@@ -143,6 +143,68 @@ impl VisualizationData {
     }
 }
 
+/// Robot pose representation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RobotPose {
+    pub position: [f32; 3],      // [x, y, z]
+    pub orientation: [f32; 4],   // quaternion [x, y, z, w]
+}
+
+/// Point cloud data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PointCloud {
+    pub points: Vec<[f32; 3]>,   // Vector of 3D points
+}
+
+/// Laser scan data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LaserScan {
+    pub ranges: Vec<f32>,        // Distance measurements
+    pub angle_min: f32,          // Start angle
+    pub angle_max: f32,          // End angle
+}
+
+/// Trait for types that can be visualized
+pub trait Visualizable {
+    fn visualize(&self, client: &VisualizationClient, entity_path: &str) -> Result<()>;
+}
+
+impl Visualizable for RobotPose {
+    fn visualize(&self, client: &VisualizationClient, entity_path: &str) -> Result<()> {
+        // Log the robot pose as a transform
+        client.log_transform(entity_path, self.position, self.orientation)?;
+        Ok(())
+    }
+}
+
+impl Visualizable for PointCloud {
+    fn visualize(&self, client: &VisualizationClient, entity_path: &str) -> Result<()> {
+        // Log the point cloud
+        client.log_points(entity_path, self.points.clone())?;
+        Ok(())
+    }
+}
+
+impl Visualizable for LaserScan {
+    fn visualize(&self, client: &VisualizationClient, entity_path: &str) -> Result<()> {
+        // Convert laser scan to 3D points for visualization
+        let mut points = Vec::new();
+        let angle_increment = (self.angle_max - self.angle_min) / self.ranges.len() as f32;
+        
+        for (i, &range) in self.ranges.iter().enumerate() {
+            if range > 0.0 && range < 100.0 {  // Filter out invalid readings
+                let angle = self.angle_min + i as f32 * angle_increment;
+                let x = range * angle.cos();
+                let y = range * angle.sin();
+                points.push([x, y, 0.0]);  // 2D scan at z=0
+            }
+        }
+        
+        client.log_points(entity_path, points)?;
+        Ok(())
+    }
+}
+
 
 
 #[cfg(test)]

@@ -1,11 +1,10 @@
-//! Example 07: Complete Integrated System
+//! Example 07: Integrated System
 //! 
-//! Learning Objectives:
-//! - See all miniROS components working together
-//! - High-performance communication and real-time visualization
-//! - Complete robot system simulation
+//! This example demonstrates:
+//! - Multiple nodes communicating
+//! - Pub/sub + visualization integration
+//! - Simplified robot system simulation
 //! 
-//! This is the culmination of all previous examples.
 //! Run with: cargo run --example 07_integrated_system
 
 use mini_ros::{
@@ -29,41 +28,34 @@ use tracing::info;
 async fn main() -> mini_ros::error::Result<()> {
     tracing_subscriber::fmt::init();
     
-    info!("=== miniROS-rs Example 07: Complete Integrated System ===");
+    info!("=== miniROS-rs Example 07: Integrated System ===");
 
     // Step 1: Start visualization
-    info!("🖥️  Starting Rerun viewer...");
+    info!("🖥️  Starting visualization...");
     let config = VisualizationConfig {
         application_id: "IntegratedSystem".to_string(),
-        spawn_viewer: true,
+        spawn_viewer: false,  // Use memory recording for reliability
     };
     let viz_client = VisualizationClient::new(config)?;
-    info!("✅ Rerun viewer started!");
+    info!("✅ Visualization initialized!");
 
-    // Step 2: Initialize mission control node
-    info!("🎯 Initializing mission control...");
-    let mut mission_control = Node::new("mission_control")?;
-    mission_control.init().await?;
-    info!("✅ Mission control ready!");
-
-    // Step 3: Initialize robot node
-    info!("🤖 Initializing robot node...");
-    let mut robot_node = Node::new("autonomous_robot")?;
+    // Step 2: Initialize integrated system node
+    info!("🤖 Initializing integrated system node...");
+    let mut robot_node = Node::new("integrated_system")?;
     robot_node.init().await?;
-    info!("✅ Robot node ready!");
+    info!("✅ Integrated system node ready!");
 
-    // Step 4: Create communication channels
+    // Step 3: Create communication channels
     info!("📡 Setting up communication...");
     
-    // Publishers
+    // Publishers for integrated system
     let pose_pub = robot_node.create_publisher::<StringMsg>("/robot/pose").await?;
     let sensor_pub = robot_node.create_publisher::<Float64Msg>("/robot/sensors/lidar").await?;
-    let status_pub = mission_control.create_publisher::<StringMsg>("/mission/status").await?;
+    let status_pub = robot_node.create_publisher::<StringMsg>("/mission/status").await?;
 
-    // Subscribers (we'll simulate their behavior)
     info!("✅ Communication channels established!");
 
-    // Step 5: Start integrated mission
+    // Step 4: Start integrated mission
     info!("🚀 Starting integrated mission...");
     
     // Mission parameters
@@ -80,7 +72,7 @@ async fn main() -> mini_ros::error::Result<()> {
     ];
     
     let mut current_waypoint = 0;
-    let total_steps = 100;
+    let total_steps = 50;  // Shorter demo
 
     for step in 0..total_steps {
         let t = step as f64 / 10.0;

@@ -1,12 +1,12 @@
-//! Example 06: Advanced Visualization with 3D Data
+//! Example 06: Visualization with 3D Data
 //! 
 //! This example demonstrates:
-//! - Starting Rerun GUI viewer automatically
-//! - 3D visualization (robot poses, point clouds, laser scans)
-//! - Real-time robot trajectory visualization
-//! - Complex multi-sensor data display
+//! - 3D robot pose visualization
+//! - Point cloud data visualization
+//! - Laser scan visualization
+//! - Real-time data logging with Rerun
 //! 
-//! Prerequisites: Install Rerun viewer with `cargo install rerun-cli`
+//! Note: Rerun viewer may not launch automatically - data is logged to memory
 //! Run with: cargo run --example 06_visualization_advanced
 
 use mini_ros::visualization::{
@@ -20,25 +20,22 @@ use tracing::info;
 async fn main() -> mini_ros::error::Result<()> {
     tracing_subscriber::fmt::init();
     
-    info!("=== miniROS-rs Example 06: Advanced Visualization ===");
+    info!("=== miniROS-rs Example 06: Visualization ===");
 
-    // Create visualization client with GUI enabled
-    info!("🖥️  Starting Rerun viewer...");
+    // Create visualization client with memory recording (more reliable)
+    info!("🖥️  Starting visualization logging...");
     let config = VisualizationConfig {
-        application_id: "miniROS_Advanced_Visualization".to_string(),
-        spawn_viewer: true,  // Launch the Rerun GUI!
+        application_id: "miniROS_Visualization".to_string(),
+        spawn_viewer: false,  // Use memory recording for reliability
     };
     
     let viz_client = VisualizationClient::new(config)?;
-    info!("✅ Rerun viewer started! Check the GUI window.");
+    info!("✅ Visualization client initialized!");
 
-    // Give the viewer time to start up
-    sleep(Duration::from_secs(2)).await;
+    info!("🚀 Starting 3D visualization demonstration...");
 
-    info!("🚀 Starting advanced 3D visualization...");
-
-    // Simulate complex robot mission with 3D data
-    for i in 0..40 {
+    // Simulate robot mission with 3D data
+    for i in 0..20 {
         let t = i as f64 * 0.15;
         
         // === Robot Trajectory ===
@@ -120,7 +117,7 @@ async fn main() -> mini_ros::error::Result<()> {
         if i % 8 == 0 {
             let waypoint_x = x + 2.0 * (t * 0.2).cos();
             let waypoint_y = y + 2.0 * (t * 0.2).sin();
-            viz_client.log_points_3d("navigation/waypoint", vec![[waypoint_x as f32, waypoint_y as f32, (z + 1.0) as f32]])?;
+            viz_client.log_points("navigation/waypoint", vec![[waypoint_x as f32, waypoint_y as f32, (z + 1.0) as f32]])?;
         }
 
         // === System Status ===
@@ -156,13 +153,9 @@ async fn main() -> mini_ros::error::Result<()> {
     viz_client.log_text("mission/status", "🎉 Mission completed successfully!")?;
     viz_client.log_scalar("robot/mission_progress", 100.0)?;
     
-    info!("✅ Advanced 3D visualization completed!");
-    info!("🎮 Check the Rerun viewer to explore the 3D robot trajectory!");
+    info!("✅ 3D visualization demonstration completed!");
+    info!("📊 Successfully logged robot trajectory, point clouds, and sensor data");
     info!("💡 Next: Try example 07 for the complete integrated system");
-    
-    // Keep visualization open longer for exploration
-    info!("⏳ Keeping visualization open for 15 seconds...");
-    sleep(Duration::from_secs(15)).await;
     
     Ok(())
 } 

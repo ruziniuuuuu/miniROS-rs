@@ -13,7 +13,7 @@ use serde::{Serialize, Deserialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::error::{Result, MiniRosError};
+use crate::error::Result;
 use crate::message::{Message, StringMsg};
 use crate::{Node, Publisher, Subscriber};
 
@@ -75,12 +75,18 @@ pub struct ActionFeedback {
 /// Action server that processes long-running goals
 pub struct ActionServer {
     action_name: String,
+    
+    #[allow(dead_code)] // Reserved for future use in goal republishing
     goal_publisher: Publisher<StringMsg>,
+    
     result_publisher: Publisher<StringMsg>,
     feedback_publisher: Publisher<StringMsg>,
     status_publisher: Publisher<StringMsg>,
     goal_subscriber: Subscriber<StringMsg>,
+    
+    #[allow(dead_code)] // Reserved for future use in goal cancellation
     cancel_subscriber: Subscriber<StringMsg>,
+    
     goals: Arc<Mutex<HashMap<String, GoalInfo>>>,
 }
 
@@ -227,11 +233,15 @@ impl ActionServer {
 
 /// Action client for sending goals and receiving feedback
 pub struct ActionClient {
+    #[allow(dead_code)] // Reserved for future use in client identification
     action_name: String,
+    
     goal_publisher: Publisher<StringMsg>,
     cancel_publisher: Publisher<StringMsg>,
     result_subscriber: Subscriber<StringMsg>,
     feedback_subscriber: Subscriber<StringMsg>,
+    
+    #[allow(dead_code)] // Reserved for future use in status monitoring
     status_subscriber: Subscriber<StringMsg>,
 }
 
