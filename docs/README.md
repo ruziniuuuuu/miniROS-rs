@@ -53,14 +53,14 @@ docs/
 
 ## 📖 Documentation Overview
 
-### **Complete Robotics Middleware**
-The documentation now reflects miniROS-rs as a **comprehensive** robotics middleware with:
+### **Focused Robotics Middleware**
+The documentation reflects miniROS-rs as a **focused** robotics middleware with:
 
-- **Complete ROS2 Patterns**: Pub/Sub, Services, Actions, Parameters
+- **Core ROS2 Patterns**: Pub/Sub, Services, Actions, Parameters
 - **3D Visualization**: Built-in Rerun integration
-- **Multiple Transports**: DDS, TCP, Zenoh support
-- **Python Compatibility**: ROS2 rclpy drop-in replacement
-- **Production Ready**: Real-world robotics system support
+- **Multiple Transports**: DDS, TCP, UDP support
+- **Python Compatibility**: ROS2 rclpy-compatible API
+- **High Performance**: Rust-based implementation with async support
 
 ### **Updated Content**
 
@@ -97,12 +97,12 @@ The documentation now reflects miniROS-rs as a **comprehensive** robotics middle
 
 ### **Key Updates**
 
-1. **Comprehensive Features**: Updated from "minimal" to "complete" robotics middleware
+1. **Core Features**: Focus on essential robotics communication patterns
 2. **ROS2 Compatibility**: Emphasis on ROS2 rclpy API compatibility
 3. **Visualization Integration**: Built-in 3D visualization documentation
-4. **Multiple Transports**: DDS, TCP, Zenoh transport options
-5. **Production Examples**: Real-world system integration patterns
-6. **Performance Focus**: Benchmarks and optimization guides
+4. **Multiple Transports**: DDS, TCP, UDP transport options
+5. **Practical Examples**: Real-world system integration patterns
+6. **Performance Optimization**: Practical optimization techniques
 
 ## 🚀 Automatic Deployment
 

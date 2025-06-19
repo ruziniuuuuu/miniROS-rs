@@ -155,14 +155,12 @@ python minimal_subscriber.py
 - `talker.py` - Publisher with logging
 - `listener.py` - Subscriber with logging
 
-## Performance vs ROS2
+## Development Benefits
 
-| Feature | miniROS | ROS2 |
-|---------|---------|------|
-| Startup | ~100ms | ~2s |
-| Memory | ~10MB | ~100MB |
-| Latency | ~50μs | ~200μs |
-| Install time | ~10s with uv | ~300s |
+- **Fast iteration** - Quick build and test cycles
+- **Simple deployment** - Single binary with dependencies
+- **Cross-platform** - Works on Linux, macOS, Windows
+- **Memory efficient** - Suitable for resource-constrained systems
 
 ## What's Missing
 

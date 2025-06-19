@@ -1,38 +1,29 @@
 # miniROS-rs
 
-Add commentMore actions
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://ruziniuuuuu.github.io/miniROS-rs/)
 [![DeepWiki](https://img.shields.io/badge/wiki-DeepWiki-purple)](https://deepwiki.com/ruziniuuuuu/miniROS-rs)
 [![macOS Tested](https://img.shields.io/badge/macOS-tested-brightgreen?logo=apple)](https://github.com/ruziniuuuuu/miniROS-rs)
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange?logo=rust)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE-MIT)
 
-A **lightweight, high-performance** ROS2-like middleware implementation in Rust with Python bindings.
+A **lightweight, high-performance** ROS2-compatible middleware implementation in Rust with Python bindings.
 
-> **"Mini" Philosophy**: Focus on **core functionality only** - pub/sub, services, parameters, actions, and visualization. Maximum performance with minimum complexity.
+> **"Mini" Philosophy**: Focus on **core functionality** - pub/sub, services, parameters, actions, and visualization. Maximum performance with minimum complexity.
 
-## 🚀 Why miniROS-rs?
-
-- **🔥 4x Faster** than ROS2 DDS for local communication
-- **💾 10x Less Memory** footprint compared to ROS2
-- **🐍 Python Compatible** - API mirrors ROS2 rclpy for easy migration
-- **⚡ Zero-Copy** message passing with Rust performance
-- **🎯 Minimal** - Only essential robotics communication primitives
-- **🔗 Cross-Platform** - Works on Linux, macOS, and Windows
-
-## ✨ Key Features
+## 🚀 Key Features
 
 ### Core Communication
-- **Publisher/Subscriber** - High-performance message passing
-- **Services** - Request/response communication
-- **Actions** - Long-running task management 
+- **Publisher/Subscriber** - Type-safe message passing with async support
+- **Services** - Request/response communication patterns  
+- **Actions** - Long-running task management with goal/feedback/result
 - **Parameters** - Dynamic configuration system
 
 ### Advanced Features
-- **Custom Messages** - Define your own message types
-- **Visualization** - Built-in Rerun integration
-- **Discovery** - Automatic node and service discovery
-- **Transport Options** - In-memory broker, TCP, UDP, DDS
+- **Custom Messages** - Define structured data types with automatic serialization
+- **Visualization** - Built-in Rerun integration for 3D data visualization
+- **Discovery** - Automatic node and service discovery across network
+- **Multi-Transport** - DDS, TCP, UDP, and in-memory transport options
+- **Python Bindings** - ROS2 rclpy-compatible API for easy migration
 
 ## 🛠️ Quick Start
 
@@ -63,7 +54,6 @@ async fn main() -> Result<()> {
 
 ```python
 import mini_ros
-import time
 
 # Initialize (same as rclpy.init())
 mini_ros.init()
@@ -116,7 +106,7 @@ pip install -e ".[viz]"
 
 ## 🏃‍♂️ Examples
 
-### Rust Examples (Sequential Learning)
+### Rust Examples (Progressive Learning)
 
 ```bash
 # Basic pub/sub communication
@@ -131,26 +121,23 @@ cargo run --example 03_services
 # Visualization with Rerun
 cargo run --example 04_visualization_basic --features visualization
 
-# Advanced examples
+# Complete system integration
 cargo run --example 07_integrated_system
 ```
 
-### Python Examples (Minimal & Clean)
+### Python Examples
 
 ```bash
 cd python/examples
 
-# Minimal publisher (< 25 lines)
+# Minimal publisher
 python minimal_publisher.py
 
 # Minimal subscriber  
 python minimal_subscriber.py
 
-# Complete pub/sub demo (< 30 lines)
+# Complete pub/sub demo
 python simple_pubsub.py
-
-# Parameter usage
-python simple_param.py
 ```
 
 ## 🏗️ Architecture
@@ -176,18 +163,18 @@ python simple_param.py
 
 ### Phase 1: Core ✅
 - [x] Basic pub/sub with memory broker
-- [x] Services (simplified)
-- [x] Custom messages
+- [x] Services with request/response patterns
+- [x] Custom message definitions
 - [x] Python bindings (rclpy-compatible)
 - [x] Discovery service
-- [x] Examples and documentation
+- [x] Documentation and examples
 
 ### Phase 2: Advanced ✅
-- [x] Actions (goal-based tasks)
-- [x] Parameters (dynamic config)
+- [x] Actions with goal/feedback/result
+- [x] Parameters with dynamic configuration
 - [x] Visualization (Rerun integration)
 - [x] Cross-language type system
-- [x] Performance benchmarks
+- [x] DDS transport layer
 
 ### Phase 3: Ecosystem 🔮
 - [ ] ROS2 bridge compatibility
@@ -198,9 +185,8 @@ python simple_param.py
 ## 🔧 Development
 
 ```bash
-# Clone repository
-git clone https://github.com/ruziniuuuuu/miniROS-rs
-cd miniROS-rs
+# Build the project
+cargo build
 
 # Run tests
 cargo test
@@ -211,36 +197,27 @@ cargo run --example 01_basic_pubsub
 # Build Python bindings
 cd python && pip install -e .
 
-# Run Python examples
-python examples/simple_pubsub.py
+# Build documentation
+cd docs && mdbook serve
 ```
 
-## 📊 Performance
+## 📚 Documentation
 
-| Metric | miniROS-rs | ROS2 DDS | Improvement |
-|--------|------------|----------|-------------|
-| **Latency** | ~5µs | ~20µs | **4x faster** |
-| **Throughput** | 200K msg/s | 50K msg/s | **4x higher** |
-| **Memory** | ~2MB | ~20MB | **10x less** |
-| **CPU Usage** | ~1% | ~5% | **5x lower** |
-
-*Benchmarks on local pub/sub with 1KB messages*
+- **[Complete Documentation](https://ruziniuuuuu.github.io/miniROS-rs/)** - API reference and tutorials
+- **[DeepWiki](https://deepwiki.com/ruziniuuuuu/miniROS-rs)** - Community knowledge base
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Focus Areas
-- 🚀 **Performance** - Keep it fast and lightweight
-- 🎯 **Simplicity** - Maintain the "mini" philosophy  
-- 🔧 **ROS2 Compatibility** - Mirror rclpy APIs when possible
-- 📚 **Documentation** - Clear examples and guides
+Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) and submit pull requests for any improvements.
 
 ## 📄 License
 
-This project is licensed under the MIT OR Apache-2.0 license.
+This project is licensed under either of
 
-## 🙏 Acknowledgments
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+- MIT License ([LICENSE-MIT](LICENSE-MIT))
+
+at your option.
 
 - Inspired by ROS2 and rclpy
 - Built with Rust and PyO3
