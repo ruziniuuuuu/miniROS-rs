@@ -1,6 +1,6 @@
 [package]
 name = "mini-ros"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2024"
 authors = ["Chenyu Cao <ruziniuuuuu@gmail.com>"]
 description = "A high-performance, cross-platform ROS2-like middleware implementation"
@@ -38,6 +38,10 @@ pyo3-asyncio = { version = "0.20", features = ["tokio-runtime"], optional = true
 # Image processing for Python examples
 image = { version = "0.24", optional = true }
 
+# Additional dependencies for new features
+lazy_static = "1.4"
+chrono = { version = "0.4", features = ["serde"] }
+
 [dev-dependencies]
 tokio-test = "0.4"
 
@@ -62,6 +66,10 @@ name = "03_services"
 path = "examples/03_services.rs"
 
 [[example]]
+name = "04_actions_parameters"
+path = "examples/04_actions_parameters.rs"
+
+[[example]]
 name = "04_visualization_basic"
 path = "examples/04_visualization_basic.rs"
 
@@ -77,3 +85,18 @@ path = "examples/06_visualization_advanced.rs"
 name = "07_integrated_system"
 path = "examples/07_integrated_system.rs"
 
+[[example]]
+name = "08_performance_benchmarks"
+path = "examples/08_performance_benchmarks.rs"
+
+[[example]]
+name = "09_visualization_demo"
+path = "examples/09_visualization_demo.rs"
+
+[[example]]
+name = "10_cross_language_types"
+path = "examples/10_cross_language_types.rs"
+
+[[example]]
+name = "11_minimal_benchmarks"
+path = "examples/11_minimal_benchmarks.rs"
