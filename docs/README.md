@@ -4,9 +4,10 @@ This directory contains the source files for the miniROS-rs documentation, built
 
 ## 📚 Live Documentation
 
-The documentation is automatically deployed to GitHub Pages:
+The documentation is available in multiple formats:
 
-**🔗 [https://ruziniuuuuu.github.io/miniROS-rs/](https://ruziniuuuuu.github.io/miniROS-rs/)**
+- **🔗 [Official Documentation](https://ruziniuuuuu.github.io/miniROS-rs/)** - Complete API reference and guides (GitHub Pages)
+- **📖 [DeepWiki](https://deepwiki.com/ruziniuuuuu/miniROS-rs)** - Community-driven knowledge base with tutorials and examples
 
 ## 🛠️ Local Development
 

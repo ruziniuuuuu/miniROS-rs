@@ -1,6 +1,7 @@
 # miniROS-rs
 
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://ruziniuuuuu.github.io/miniROS-rs/)
+[![DeepWiki](https://img.shields.io/badge/wiki-DeepWiki-purple)](https://deepwiki.com/ruziniuuuuu/miniROS-rs)
 [![macOS Tested](https://img.shields.io/badge/macOS-tested-brightgreen?logo=apple)](https://github.com/ruziniuuuuu/miniROS-rs)
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange?logo=rust)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE-MIT)
@@ -111,6 +112,11 @@ cargo run --example 03_services         # Request/response
 python python/examples/minimal_publisher.py
 python python/examples/minimal_subscriber.py
 ```
+
+## Documentation
+
+- 📚 **[Official Documentation](https://ruziniuuuuu.github.io/miniROS-rs/)** - Complete API reference and guides
+- 📖 **[DeepWiki](https://deepwiki.com/ruziniuuuuu/miniROS-rs)** - Community-driven knowledge base and tutorials
 
 ## Performance vs ROS2
 
