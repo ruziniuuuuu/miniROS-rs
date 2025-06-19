@@ -16,7 +16,7 @@ from typing import Callable, Any, Optional
 import threading
 import time
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __author__ = "Chenyu Cao"
 __email__ = "ruziniuuuuu@gmail.com"
 

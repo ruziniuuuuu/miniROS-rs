@@ -1,18 +1,18 @@
 //! Node implementation for MiniROS
 
 use crate::core::Context;
-use crate::discovery::{NodeInfo, TopicInfo, ServiceInfo};
-use crate::error::{Result, MiniRosError};
+use crate::discovery::{NodeInfo, ServiceInfo, TopicInfo};
+use crate::error::{MiniRosError, Result};
 use crate::message::Message;
 use crate::publisher::Publisher;
-use crate::subscriber::Subscriber;
 use crate::service::{Service, ServiceClient};
+use crate::subscriber::Subscriber;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 /// MiniROS Node - the basic computational unit
-/// 
+///
 /// A node encapsulates functionality and can publish, subscribe to topics,
 /// provide services, and communicate with other nodes.
 pub struct Node {
@@ -66,23 +66,20 @@ impl Node {
     /// Shutdown the node gracefully
     pub async fn shutdown(&self) -> Result<()> {
         tracing::info!("Shutting down node: {}", self.name);
-        
+
         // Context shutdown will handle cleanup
         self.context.shutdown().await?;
-        
+
         tracing::info!("Node '{}' shutdown complete", self.name);
         Ok(())
     }
 
     /// Create a publisher for the given topic
-    pub async fn create_publisher<T: Message>(
-        &mut self, 
-        topic: &str
-    ) -> Result<Publisher<T>> {
+    pub async fn create_publisher<T: Message>(&mut self, topic: &str) -> Result<Publisher<T>> {
         let type_name = std::any::type_name::<T>().to_string();
         // Use automatic port assignment for testing
         let pub_endpoint = "127.0.0.1:0".to_string();
-        
+
         let topic_info = TopicInfo {
             name: topic.to_string(),
             type_name,
@@ -98,10 +95,7 @@ impl Node {
     }
 
     /// Create a subscriber for the given topic
-    pub async fn create_subscriber<T: Message>(
-        &mut self,
-        topic: &str,
-    ) -> Result<Subscriber<T>> {
+    pub async fn create_subscriber<T: Message>(&mut self, topic: &str) -> Result<Subscriber<T>> {
         let type_name = std::any::type_name::<T>().to_string();
         // Use automatic port assignment for testing
         let sub_endpoint = "127.0.0.1:0".to_string();
@@ -126,7 +120,11 @@ impl Node {
         service_name: &str,
         callback: impl Fn(Req) -> Result<Res> + Send + Sync + 'static,
     ) -> Result<Service<Req, Res>> {
-        let type_name = format!("{}/{}", std::any::type_name::<Req>(), std::any::type_name::<Res>());
+        let type_name = format!(
+            "{}/{}",
+            std::any::type_name::<Req>(),
+            std::any::type_name::<Res>()
+        );
         // Use automatic port assignment for testing
         let service_endpoint = "127.0.0.1:0".to_string();
 
@@ -141,7 +139,13 @@ impl Node {
         // Re-announce with updated service info
         self.announce().await?;
 
-        Service::new(service_name, &service_endpoint, callback, self.context.clone()).await
+        Service::new(
+            service_name,
+            &service_endpoint,
+            callback,
+            self.context.clone(),
+        )
+        .await
     }
 
     /// Create a service client for the given service
@@ -176,12 +180,13 @@ impl Node {
     /// This is a convenience method for simple nodes
     pub async fn spin(&self) -> Result<()> {
         tracing::info!("Node '{}' spinning...", self.name);
-        
+
         // Simple spin - just wait for shutdown signal
         // In a real implementation, this might process callbacks, etc.
-        tokio::signal::ctrl_c().await
+        tokio::signal::ctrl_c()
+            .await
             .map_err(|e| MiniRosError::IoError(e))?;
-        
+
         tracing::info!("Received shutdown signal");
         Ok(())
     }
@@ -214,7 +219,7 @@ impl Node {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::message::{StringMsg, Int32Msg};
+    use crate::message::{Int32Msg, StringMsg};
 
     #[tokio::test]
     async fn test_node_creation() {
@@ -234,7 +239,7 @@ mod tests {
     async fn test_publisher_creation() {
         let context = Context::with_domain_id(11).unwrap();
         let mut node = Node::with_context("test_node", context).unwrap();
-        
+
         // Test node init (may fail due to network constraints in test environment)
         match node.init().await {
             Ok(_) => {
@@ -247,7 +252,9 @@ mod tests {
                     Err(_) => {
                         // In test environment, network binding might fail
                         // This is acceptable for unit tests focused on structure
-                        println!("Publisher creation failed in test environment (network constraints)");
+                        println!(
+                            "Publisher creation failed in test environment (network constraints)"
+                        );
                     }
                 }
                 let _ = node.shutdown().await;
@@ -264,7 +271,7 @@ mod tests {
     async fn test_subscriber_creation() {
         let context = Context::with_domain_id(12).unwrap();
         let mut node = Node::with_context("test_node", context).unwrap();
-        
+
         // Test node init (may fail due to network constraints in test environment)
         match node.init().await {
             Ok(_) => {
@@ -277,7 +284,9 @@ mod tests {
                     Err(_) => {
                         // In test environment, network binding might fail
                         // This is acceptable for unit tests focused on structure
-                        println!("Subscriber creation failed in test environment (network constraints)");
+                        println!(
+                            "Subscriber creation failed in test environment (network constraints)"
+                        );
                     }
                 }
                 let _ = node.shutdown().await;

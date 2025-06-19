@@ -62,4 +62,4 @@ impl From<bincode::Error> for MiniRosError {
     fn from(err: bincode::Error) -> Self {
         MiniRosError::SerializationError(err.to_string())
     }
-} 
+}

@@ -1,24 +1,24 @@
 //! High-performance transport layer for MiniROS
 
-use crate::error::{Result, MiniRosError};
+use crate::error::{MiniRosError, Result};
 
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use dashmap::DashMap;
 
-use std::sync::Arc;
-use tokio::net::{UdpSocket, TcpListener, TcpStream};
-use tokio::sync::mpsc;
 use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio::net::{TcpListener, TcpStream, UdpSocket};
+use tokio::sync::mpsc;
 
 /// Transport layer abstraction for different communication protocols
 #[async_trait::async_trait]
 pub trait Transport: Send + Sync {
     /// Send a message to the specified endpoint
     async fn send(&self, endpoint: &str, data: &[u8]) -> Result<()>;
-    
+
     /// Start listening for incoming messages
     async fn listen(&self, endpoint: &str) -> Result<Receiver<Vec<u8>>>;
-    
+
     /// Stop the transport
     async fn stop(&self) -> Result<()>;
 }
@@ -39,24 +39,32 @@ impl UdpTransport {
 #[async_trait::async_trait]
 impl Transport for UdpTransport {
     async fn send(&self, endpoint: &str, data: &[u8]) -> Result<()> {
-        let addr: SocketAddr = endpoint.parse()
+        let addr: SocketAddr = endpoint
+            .parse()
             .map_err(|e| MiniRosError::NetworkError(format!("Invalid endpoint: {}", e)))?;
-        
-        let socket = UdpSocket::bind("0.0.0.0:0").await
+
+        let socket = UdpSocket::bind("0.0.0.0:0")
+            .await
             .map_err(|e| MiniRosError::NetworkError(e.to_string()))?;
-        
-        socket.send_to(data, addr).await
+
+        socket
+            .send_to(data, addr)
+            .await
             .map_err(|e| MiniRosError::NetworkError(e.to_string()))?;
-        
+
         Ok(())
     }
 
     async fn listen(&self, endpoint: &str) -> Result<Receiver<Vec<u8>>> {
-        let addr: SocketAddr = endpoint.parse()
+        let addr: SocketAddr = endpoint
+            .parse()
             .map_err(|e| MiniRosError::NetworkError(format!("Invalid endpoint: {}", e)))?;
-        
-        let socket = Arc::new(UdpSocket::bind(addr).await
-            .map_err(|e| MiniRosError::NetworkError(e.to_string()))?);
+
+        let socket = Arc::new(
+            UdpSocket::bind(addr)
+                .await
+                .map_err(|e| MiniRosError::NetworkError(e.to_string()))?,
+        );
 
         let (tx, rx) = unbounded();
         self.receivers.insert(endpoint.to_string(), tx.clone());
@@ -64,7 +72,7 @@ impl Transport for UdpTransport {
         // Spawn background task to receive messages
         let receivers_clone = self.receivers.clone();
         let endpoint_clone = endpoint.to_string();
-        
+
         tokio::spawn(async move {
             let mut buffer = [0u8; 65536];
             loop {
@@ -80,7 +88,7 @@ impl Transport for UdpTransport {
                     Err(_) => break,
                 }
             }
-            
+
             // Clean up when done
             receivers_clone.remove(&endpoint_clone);
         });
@@ -110,29 +118,35 @@ impl TcpTransport {
 #[async_trait::async_trait]
 impl Transport for TcpTransport {
     async fn send(&self, endpoint: &str, data: &[u8]) -> Result<()> {
-        let addr: SocketAddr = endpoint.parse()
+        let addr: SocketAddr = endpoint
+            .parse()
             .map_err(|e| MiniRosError::NetworkError(format!("Invalid endpoint: {}", e)))?;
-        
-        let mut stream = TcpStream::connect(addr).await
+
+        let mut stream = TcpStream::connect(addr)
+            .await
             .map_err(|e| MiniRosError::NetworkError(e.to_string()))?;
-        
+
         use tokio::io::AsyncWriteExt;
-        stream.write_all(data).await
+        stream
+            .write_all(data)
+            .await
             .map_err(|e| MiniRosError::NetworkError(e.to_string()))?;
-        
+
         Ok(())
     }
 
     async fn listen(&self, endpoint: &str) -> Result<Receiver<Vec<u8>>> {
-        let addr: SocketAddr = endpoint.parse()
+        let addr: SocketAddr = endpoint
+            .parse()
             .map_err(|e| MiniRosError::NetworkError(format!("Invalid endpoint: {}", e)))?;
-        
-        let listener = TcpListener::bind(addr).await
+
+        let listener = TcpListener::bind(addr)
+            .await
             .map_err(|e| MiniRosError::NetworkError(e.to_string()))?;
-        
+
         let (tx, rx) = unbounded();
         let (stop_tx, mut stop_rx) = mpsc::unbounded_channel();
-        
+
         self.listeners.insert(endpoint.to_string(), stop_tx);
 
         // Spawn background task to accept connections
@@ -245,4 +259,4 @@ impl TransportManager {
             self.udp_transport.listen(endpoint).await
         }
     }
-} 
+}

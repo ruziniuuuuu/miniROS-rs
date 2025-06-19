@@ -1,16 +1,16 @@
 //! Core MiniROS context and configuration
 
-use crate::error::Result;
 use crate::discovery::DiscoveryService;
+use crate::error::Result;
 
 // Import transport based on feature flags
-#[cfg(feature = "tcp-transport")]
-use crate::transport::TransportManager;
 #[cfg(feature = "dds-transport")]
 use crate::dds_transport::DdsTransport;
+#[cfg(feature = "tcp-transport")]
+use crate::transport::TransportManager;
 
-use std::sync::Arc;
 use parking_lot::RwLock;
+use std::sync::Arc;
 use uuid::Uuid;
 
 /// Global MiniROS context containing shared state
@@ -67,8 +67,11 @@ impl Context {
 
     /// Initialize the context and start background services
     pub async fn init(&self) -> Result<()> {
-        tracing::info!("Initializing MiniROS context with domain_id: {}", self.domain_id());
-        
+        tracing::info!(
+            "Initializing MiniROS context with domain_id: {}",
+            self.domain_id()
+        );
+
         // Start discovery service
         {
             let mut discovery = self.inner.discovery.write();
@@ -128,4 +131,4 @@ impl Default for Context {
     fn default() -> Self {
         Self::new().expect("Failed to create default context")
     }
-} 
+}

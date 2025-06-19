@@ -1,16 +1,16 @@
 //! Zenoh-style transport implementation for miniROS (simplified version)
-//! 
+//!
 //! Provides high-performance pub/sub communication with zenoh-compatible API.
 //! This is a simplified implementation that will be upgraded to full Zenoh when
 //! version compatibility issues are resolved.
 
-use crate::error::{Result, MiniRosError};
+use crate::error::{MiniRosError, Result};
 use crate::message::Message;
 use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tokio::net::UdpSocket;
+use tokio::sync::RwLock;
 
 /// Zenoh-style transport configuration
 #[derive(Clone, Debug)]
@@ -40,14 +40,17 @@ impl ZenohTransport {
     /// Create new Zenoh-style transport
     pub async fn new(config: ZenohConfig) -> Result<Self> {
         // Create UDP socket for multicast communication
-        let socket = UdpSocket::bind("0.0.0.0:0").await
+        let socket = UdpSocket::bind("0.0.0.0:0")
+            .await
             .map_err(|e| MiniRosError::NetworkError(format!("Failed to bind socket: {}", e)))?;
 
         // Join multicast group
-        socket.join_multicast_v4(
-            config.multicast_address.parse().unwrap(),
-            "0.0.0.0".parse().unwrap()
-        ).map_err(|e| MiniRosError::NetworkError(format!("Failed to join multicast: {}", e)))?;
+        socket
+            .join_multicast_v4(
+                config.multicast_address.parse().unwrap(),
+                "0.0.0.0".parse().unwrap(),
+            )
+            .map_err(|e| MiniRosError::NetworkError(format!("Failed to join multicast: {}", e)))?;
 
         Ok(Self {
             socket: Arc::new(socket),
@@ -72,7 +75,7 @@ impl ZenohTransport {
     /// Create subscriber for topic
     pub async fn create_subscriber<T: Message>(&self, topic: &str) -> Result<ZenohSubscriber<T>> {
         let (sender, receiver) = unbounded();
-        
+
         // Store subscriber info
         {
             let mut subscribers = self.subscribers.write().await;
@@ -83,7 +86,7 @@ impl ZenohTransport {
         let socket = self.socket.clone();
         let topic_filter = topic.to_string();
         let sender_clone = sender.clone();
-        
+
         tokio::spawn(async move {
             let mut buf = [0u8; 65536];
             loop {
@@ -96,7 +99,8 @@ impl ZenohTransport {
                                 if let Some(payload_start) = msg_str.find(": ") {
                                     let payload = &buf[payload_start + 2..len];
                                     if let Ok(message) = bincode::deserialize::<T>(payload) {
-                                        let serialized = bincode::serialize(&message).unwrap_or_default();
+                                        let serialized =
+                                            bincode::serialize(&message).unwrap_or_default();
                                         let _ = sender_clone.send(serialized);
                                     }
                                 }
@@ -219,7 +223,10 @@ mod tests {
     async fn test_zenoh_transport_creation() {
         let config = ZenohConfig::default();
         let result = ZenohTransport::new(config).await;
-        assert!(result.is_ok(), "Zenoh-style transport should be created successfully");
+        assert!(
+            result.is_ok(),
+            "Zenoh-style transport should be created successfully"
+        );
     }
 
     #[tokio::test]
@@ -227,6 +234,9 @@ mod tests {
         let config = ZenohConfig::default();
         let transport = ZenohTransport::new(config).await.unwrap();
         let publisher = transport.create_publisher::<StringMsg>("test_topic").await;
-        assert!(publisher.is_ok(), "Publisher should be created successfully");
+        assert!(
+            publisher.is_ok(),
+            "Publisher should be created successfully"
+        );
     }
-} 
+}

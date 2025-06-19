@@ -1,10 +1,10 @@
 //! Python bindings for miniROS-rs
-//! 
+//!
 //! This module provides Python API that mimics ROS2 rclpy syntax
 
 // PyO3 macro limitations in Rust 2024 edition:
 // - non_local_definitions: PyO3 macros generate impl blocks that appear non-local
-// - unsafe_op_in_unsafe_fn: PyO3 argument parsing uses unsafe functions in macros  
+// - unsafe_op_in_unsafe_fn: PyO3 argument parsing uses unsafe functions in macros
 // These are known limitations of PyO3 0.20 with Rust 2024 edition
 // Future PyO3 versions are expected to resolve these issues
 #![allow(non_local_definitions)]
@@ -34,12 +34,17 @@ impl Node {
     }
 
     /// Create a publisher
-    fn create_publisher(&self, _msg_type: PyObject, topic: String, _qos_depth: i32) -> PyResult<Publisher> {
+    fn create_publisher(
+        &self,
+        _msg_type: PyObject,
+        topic: String,
+        _qos_depth: i32,
+    ) -> PyResult<Publisher> {
         {
             let mut pubs = self.publishers.lock().unwrap();
             pubs.insert(topic.clone(), "StringMsg".to_string());
         }
-        
+
         Ok(Publisher {
             topic: topic.clone(),
             node_name: self.name.clone(),
@@ -47,12 +52,18 @@ impl Node {
     }
 
     /// Create a subscription
-    fn create_subscription(&self, _msg_type: PyObject, topic: String, callback: PyObject, _qos_depth: i32) -> PyResult<Subscription> {
+    fn create_subscription(
+        &self,
+        _msg_type: PyObject,
+        topic: String,
+        callback: PyObject,
+        _qos_depth: i32,
+    ) -> PyResult<Subscription> {
         {
             let mut subs = self.subscribers.lock().unwrap();
             subs.insert(topic.clone(), "StringMsg".to_string());
         }
-        
+
         Ok(Subscription {
             topic: topic.clone(),
             callback: Some(callback),
@@ -103,9 +114,12 @@ impl Publisher {
         Python::with_gil(|py| {
             // Try to extract as StringMessage first
             if let Ok(string_msg) = data.extract::<StringMessage>(py) {
-                println!("Publishing StringMessage to {}: {}", self.topic, string_msg.data);
+                println!(
+                    "Publishing StringMessage to {}: {}",
+                    self.topic, string_msg.data
+                );
                 Ok(())
-            } 
+            }
             // Try to extract as a plain string
             else if let Ok(string_data) = data.extract::<String>(py) {
                 println!("Publishing String to {}: {}", self.topic, string_data);
@@ -115,18 +129,16 @@ impl Publisher {
             else if let Ok(int_data) = data.extract::<i32>(py) {
                 println!("Publishing Int32 to {}: {}", self.topic, int_data);
                 Ok(())
-            }
-            else if let Ok(float_data) = data.extract::<f64>(py) {
+            } else if let Ok(float_data) = data.extract::<f64>(py) {
                 println!("Publishing Float64 to {}: {}", self.topic, float_data);
                 Ok(())
-            }
-            else {
+            } else {
                 println!("Publishing unknown type to {}: {:?}", self.topic, data);
                 Ok(())
             }
         })
     }
-    
+
     fn get_subscription_count(&self) -> i32 {
         0
     }
@@ -200,11 +212,11 @@ impl Logger {
     fn info(&self, message: String) {
         println!("[INFO] [{}]: {}", self.name, message);
     }
-    
+
     fn warn(&self, message: String) {
         println!("[WARN] [{}]: {}", self.name, message);
     }
-    
+
     fn error(&self, message: String) {
         println!("[ERROR] [{}]: {}", self.name, message);
     }
@@ -217,18 +229,18 @@ pub fn init_python_module(m: &PyModule) -> PyResult<()> {
     m.add_class::<Subscription>()?;
     m.add_class::<StringMessage>()?;
     m.add_class::<Logger>()?;
-    
+
     // Add message types as module attributes
     m.add("StringMessage", m.py().get_type::<StringMessage>())?;
     m.add("String", m.py().get_type::<StringMessage>())?; // For backward compatibility
-    
+
     // Add utility functions
     m.add_function(wrap_pyfunction!(init, m)?)?;
     m.add_function(wrap_pyfunction!(shutdown, m)?)?;
     m.add_function(wrap_pyfunction!(spin_once, m)?)?;
     m.add_function(wrap_pyfunction!(spin, m)?)?;
     m.add_function(wrap_pyfunction!(ok, m)?)?;
-    
+
     Ok(())
 }
 
@@ -241,7 +253,7 @@ fn init() -> PyResult<()> {
 }
 
 /// Shutdown miniROS (equivalent to rclpy.shutdown())
-#[pyfunction] 
+#[pyfunction]
 fn shutdown() -> PyResult<()> {
     // Cleanup logic here
     Ok(())
@@ -274,4 +286,4 @@ fn spin(_node: &Node) -> PyResult<()> {
             }
         });
     }
-} 
+}

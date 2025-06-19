@@ -1,6 +1,6 @@
 //! Node and service discovery for MiniROS
 
-use crate::error::{Result, MiniRosError};
+use crate::error::{MiniRosError, Result};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 
@@ -70,7 +70,8 @@ impl DiscoveryService {
     const NODE_TIMEOUT: Duration = Duration::from_secs(90);
 
     pub fn new(domain_id: u32) -> Result<Self> {
-        let multicast_addr = Self::MULTICAST_ADDR.parse()
+        let multicast_addr = Self::MULTICAST_ADDR
+            .parse()
             .map_err(|e| MiniRosError::NetworkError(format!("Invalid multicast address: {}", e)))?;
 
         Ok(DiscoveryService {
@@ -88,17 +89,22 @@ impl DiscoveryService {
         tracing::debug!("Starting discovery service for domain {}", self.domain_id);
 
         // Bind to local address for receiving discovery messages
-        let socket = Arc::new(UdpSocket::bind(&self.local_endpoint).await
-            .map_err(|e| MiniRosError::NetworkError(format!("Failed to bind discovery socket: {}", e)))?);
+        let socket = Arc::new(UdpSocket::bind(&self.local_endpoint).await.map_err(|e| {
+            MiniRosError::NetworkError(format!("Failed to bind discovery socket: {}", e))
+        })?);
 
         // Join multicast group
         #[cfg(unix)]
         {
             use std::net::Ipv4Addr;
-            socket.join_multicast_v4(
-                "239.255.0.1".parse::<Ipv4Addr>().unwrap(),
-                "0.0.0.0".parse::<Ipv4Addr>().unwrap(),
-            ).map_err(|e| MiniRosError::NetworkError(format!("Failed to join multicast: {}", e)))?;
+            socket
+                .join_multicast_v4(
+                    "239.255.0.1".parse::<Ipv4Addr>().unwrap(),
+                    "0.0.0.0".parse::<Ipv4Addr>().unwrap(),
+                )
+                .map_err(|e| {
+                    MiniRosError::NetworkError(format!("Failed to join multicast: {}", e))
+                })?;
         }
 
         self.socket = Some(socket.clone());
@@ -136,7 +142,7 @@ impl DiscoveryService {
         let nodes_cleanup = self.nodes.clone();
         let socket_heartbeat = socket.clone();
         let multicast_addr = self.multicast_addr;
-        
+
         tokio::spawn(async move {
             let mut heartbeat_timer = interval(Self::HEARTBEAT_INTERVAL);
             let mut cleanup_timer = interval(Duration::from_secs(60));
@@ -145,7 +151,7 @@ impl DiscoveryService {
                 tokio::select! {
                     _ = heartbeat_timer.tick() => {
                         // Send periodic node query to discover new nodes
-                        let query = DiscoveryMessage::NodeQuery { 
+                        let query = DiscoveryMessage::NodeQuery {
                             domain_id: 0 // Query all domains for now
                         };
                         if let Ok(data) = bincode::serialize(&query) {
@@ -158,7 +164,7 @@ impl DiscoveryService {
                             .duration_since(std::time::UNIX_EPOCH)
                             .unwrap_or_default()
                             .as_secs();
-                        
+
                         nodes_cleanup.retain(|_, node| {
                             now - node.last_seen < Self::NODE_TIMEOUT.as_secs()
                         });
@@ -174,14 +180,14 @@ impl DiscoveryService {
     /// Stop the discovery service
     pub async fn stop(&mut self) -> Result<()> {
         tracing::debug!("Stopping discovery service");
-        
+
         if let Some(stop_sender) = self._stop_sender.take() {
             let _ = stop_sender.send(());
         }
-        
+
         self.socket = None;
         self.nodes.clear();
-        
+
         Ok(())
     }
 
@@ -191,10 +197,12 @@ impl DiscoveryService {
             let msg = DiscoveryMessage::NodeAnnouncement(node_info.clone());
             let data = bincode::serialize(&msg)
                 .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
-            
-            socket.send_to(&data, self.multicast_addr).await
+
+            socket
+                .send_to(&data, self.multicast_addr)
+                .await
                 .map_err(|e| MiniRosError::NetworkError(e.to_string()))?;
-            
+
             // Also store locally
             self.nodes.insert(node_info.id, node_info);
         }
@@ -203,7 +211,10 @@ impl DiscoveryService {
 
     /// Get all discovered nodes
     pub fn get_nodes(&self) -> Vec<NodeInfo> {
-        self.nodes.iter().map(|entry| entry.value().clone()).collect()
+        self.nodes
+            .iter()
+            .map(|entry| entry.value().clone())
+            .collect()
     }
 
     /// Find nodes by name
@@ -263,7 +274,9 @@ impl DiscoveryService {
                 tracing::debug!("Discovered node: {}", node_info.name);
                 nodes.insert(node_info.id, node_info);
             }
-            DiscoveryMessage::NodeQuery { domain_id: _domain_id } => {
+            DiscoveryMessage::NodeQuery {
+                domain_id: _domain_id,
+            } => {
                 // Could respond with our known nodes, but keeping it simple for now
             }
             DiscoveryMessage::NodeResponse(node_list) => {
@@ -278,4 +291,4 @@ impl DiscoveryService {
             }
         }
     }
-} 
+}

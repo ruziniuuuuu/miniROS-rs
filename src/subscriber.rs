@@ -9,7 +9,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 
 /// Subscriber for receiving messages from a topic
-/// 
+///
 /// Subscribers receive messages published to topics they are interested in.
 /// Messages are received asynchronously and can be processed via callbacks or polling.
 pub struct Subscriber<T: Message> {
@@ -25,7 +25,11 @@ pub struct Subscriber<T: Message> {
 impl<T: Message> Subscriber<T> {
     /// Create a new subscriber for the given topic
     pub(crate) async fn new(topic: &str, endpoint: &str, context: Context) -> Result<Self> {
-        tracing::debug!("Creating subscriber for topic: {} on endpoint: {}", topic, endpoint);
+        tracing::debug!(
+            "Creating subscriber for topic: {} on endpoint: {}",
+            topic,
+            endpoint
+        );
 
         // Set up message receiver channel
         let (msg_sender, msg_receiver) = unbounded();
@@ -85,28 +89,28 @@ impl<T: Message> Subscriber<T> {
     }
 
     /// Receive the next message (blocking)
-    /// 
+    ///
     /// Returns `None` if the subscriber is closed or no more messages are available.
     pub fn recv(&self) -> Option<T> {
         self.receiver.recv().ok()
     }
 
     /// Try to receive a message without blocking
-    /// 
+    ///
     /// Returns `None` if no message is currently available.
     pub fn try_recv(&self) -> Option<T> {
         self.receiver.try_recv().ok()
     }
 
     /// Get an iterator over messages
-    /// 
+    ///
     /// This iterator will block on each call to `next()` until a message is available.
     pub fn iter(&self) -> impl Iterator<Item = T> + '_ {
         self.receiver.iter()
     }
 
     /// Set up a callback function to process messages asynchronously
-    /// 
+    ///
     /// The callback will be called for each received message.
     /// This method spawns a background task and returns immediately.
     pub fn on_message<F>(&self, mut callback: F) -> Result<()>
@@ -127,7 +131,7 @@ impl<T: Message> Subscriber<T> {
     }
 
     /// Set up an async callback function to process messages
-    /// 
+    ///
     /// Similar to `on_message` but for async callbacks.
     pub fn on_message_async<F, Fut>(&self, callback: F) -> Result<()>
     where
@@ -183,20 +187,21 @@ impl<T: Message> Drop for Subscriber<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::message::StringMsg;
     use crate::core::Context;
-
+    use crate::message::StringMsg;
 
     #[tokio::test]
     async fn test_subscriber_creation() {
         let context = Context::with_domain_id(30).unwrap();
         context.init().await.unwrap();
-        
-        let subscriber = Subscriber::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone()).await.unwrap();
-        
+
+        let subscriber = Subscriber::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone())
+            .await
+            .unwrap();
+
         assert_eq!(subscriber.topic(), "test_topic");
         assert!(!subscriber.has_messages());
-        
+
         drop(subscriber);
         context.shutdown().await.unwrap();
     }
@@ -205,12 +210,14 @@ mod tests {
     async fn test_subscriber_try_recv() {
         let context = Context::with_domain_id(31).unwrap();
         context.init().await.unwrap();
-        
-        let subscriber = Subscriber::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone()).await.unwrap();
-        
+
+        let subscriber = Subscriber::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone())
+            .await
+            .unwrap();
+
         // Should return None when no messages
         assert!(subscriber.try_recv().is_none());
-        
+
         drop(subscriber);
         context.shutdown().await.unwrap();
     }
@@ -219,22 +226,26 @@ mod tests {
     async fn test_subscriber_callback() {
         let context = Context::with_domain_id(32).unwrap();
         context.init().await.unwrap();
-        
-        let subscriber = Subscriber::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone()).await.unwrap();
-        
+
+        let subscriber = Subscriber::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone())
+            .await
+            .unwrap();
+
         let received_messages = Arc::new(std::sync::Mutex::new(Vec::new()));
         let received_clone = received_messages.clone();
-        
-        subscriber.on_message(move |msg: StringMsg| {
-            received_clone.lock().unwrap().push(msg.data);
-        }).unwrap();
-        
+
+        subscriber
+            .on_message(move |msg: StringMsg| {
+                received_clone.lock().unwrap().push(msg.data);
+            })
+            .unwrap();
+
         // Test passes if callback setup doesn't panic
         // No actual messages expected in this unit test
-        
+
         // Immediately drop subscriber to stop background tasks
         drop(subscriber);
-        
+
         context.shutdown().await.unwrap();
     }
 }

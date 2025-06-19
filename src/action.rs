@@ -1,15 +1,15 @@
 //! Action implementation for miniROS
-//! 
+//!
 //! Actions provide a communication pattern for long-running tasks that:
 //! - Can be preempted (cancelled)
 //! - Provide periodic feedback
 //! - Return a final result
-//! 
+//!
 //! This combines service calls with topic-based feedback.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use serde::{Serialize, Deserialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -54,7 +54,7 @@ pub struct GoalInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActionGoal {
     pub goal_id: String,
-    pub goal_data: Vec<u8>,  // Serialized goal data
+    pub goal_data: Vec<u8>, // Serialized goal data
 }
 
 /// Action result wrapper - no longer generic to avoid Deserialize issues
@@ -62,31 +62,31 @@ pub struct ActionGoal {
 pub struct ActionResult {
     pub goal_id: String,
     pub status: GoalStatus,
-    pub result_data: Option<Vec<u8>>,  // Serialized result data
+    pub result_data: Option<Vec<u8>>, // Serialized result data
 }
 
 /// Action feedback wrapper - no longer generic to avoid Deserialize issues
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActionFeedback {
     pub goal_id: String,
-    pub feedback_data: Vec<u8>,  // Serialized feedback data
+    pub feedback_data: Vec<u8>, // Serialized feedback data
 }
 
 /// Action server that processes long-running goals
 pub struct ActionServer {
     action_name: String,
-    
+
     #[allow(dead_code)] // Reserved for future use in goal republishing
     goal_publisher: Publisher<StringMsg>,
-    
+
     result_publisher: Publisher<StringMsg>,
     feedback_publisher: Publisher<StringMsg>,
     status_publisher: Publisher<StringMsg>,
     goal_subscriber: Subscriber<StringMsg>,
-    
+
     #[allow(dead_code)] // Reserved for future use in goal cancellation
     cancel_subscriber: Subscriber<StringMsg>,
-    
+
     goals: Arc<Mutex<HashMap<String, GoalInfo>>>,
 }
 
@@ -132,7 +132,7 @@ impl ActionServer {
         let mut goals = self.goals.lock().await;
         if let Some(goal_info) = goals.get_mut(goal_id) {
             goal_info.status = GoalStatus::Active;
-            
+
             // Publish status update
             let status_msg = serde_json::to_string(goal_info)?;
             let string_msg = StringMsg { data: status_msg };
@@ -148,7 +148,7 @@ impl ActionServer {
             goal_id: goal_id.to_string(),
             feedback_data,
         };
-        
+
         let feedback_msg = serde_json::to_string(&action_feedback)?;
         let string_msg = StringMsg { data: feedback_msg };
         self.feedback_publisher.publish(&string_msg).await
@@ -162,7 +162,7 @@ impl ActionServer {
             status: GoalStatus::Succeeded,
             result_data: Some(result_data),
         };
-        
+
         let result_msg = serde_json::to_string(&action_result)?;
         let string_msg = StringMsg { data: result_msg };
         self.result_publisher.publish(&string_msg).await?;
@@ -172,7 +172,7 @@ impl ActionServer {
         if let Some(goal_info) = goals.get_mut(goal_id) {
             goal_info.status = GoalStatus::Succeeded;
         }
-        
+
         Ok(())
     }
 
@@ -183,7 +183,7 @@ impl ActionServer {
             status: GoalStatus::Aborted,
             result_data: Some(error_msg.as_bytes().to_vec()),
         };
-        
+
         let result_msg = serde_json::to_string(&action_result)?;
         let string_msg = StringMsg { data: result_msg };
         self.result_publisher.publish(&string_msg).await?;
@@ -193,7 +193,7 @@ impl ActionServer {
         if let Some(goal_info) = goals.get_mut(goal_id) {
             goal_info.status = GoalStatus::Aborted;
         }
-        
+
         Ok(())
     }
 
@@ -203,7 +203,7 @@ impl ActionServer {
         F: Fn(ActionGoal) + Send + Sync + 'static,
     {
         let goals = Arc::clone(&self.goals);
-        
+
         self.goal_subscriber.on_message(move |msg: StringMsg| {
             if let Ok(action_goal) = serde_json::from_str::<ActionGoal>(&msg.data) {
                 // Register new goal
@@ -215,7 +215,7 @@ impl ActionServer {
                         .unwrap()
                         .as_secs(),
                 };
-                
+
                 tokio::spawn({
                     let goals = Arc::clone(&goals);
                     let goal_id = action_goal.goal_id.clone();
@@ -224,7 +224,7 @@ impl ActionServer {
                         goals.insert(goal_id, goal_info);
                     }
                 });
-                
+
                 callback(action_goal);
             }
         })
@@ -235,12 +235,12 @@ impl ActionServer {
 pub struct ActionClient {
     #[allow(dead_code)] // Reserved for future use in client identification
     action_name: String,
-    
+
     goal_publisher: Publisher<StringMsg>,
     cancel_publisher: Publisher<StringMsg>,
     result_subscriber: Subscriber<StringMsg>,
     feedback_subscriber: Subscriber<StringMsg>,
-    
+
     #[allow(dead_code)] // Reserved for future use in status monitoring
     status_subscriber: Subscriber<StringMsg>,
 }
@@ -278,16 +278,16 @@ impl ActionClient {
     pub async fn send_goal<G: Message>(&self, goal: &G) -> Result<String> {
         let goal_id = Uuid::new_v4().to_string();
         let goal_data = serde_json::to_vec(goal)?;
-        
+
         let action_goal = ActionGoal {
             goal_id: goal_id.clone(),
             goal_data,
         };
-        
+
         let goal_msg = serde_json::to_string(&action_goal)?;
         let string_msg = StringMsg { data: goal_msg };
         self.goal_publisher.publish(&string_msg).await?;
-        
+
         Ok(goal_id)
     }
 
@@ -326,7 +326,7 @@ impl ActionClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::message::{StringMsg, Int32Msg};
+    use crate::message::{Int32Msg, StringMsg};
 
     #[tokio::test]
     async fn test_action_server_creation() {
@@ -337,14 +337,19 @@ mod tests {
             "test_action",
             context.clone(),
             |goal: ActionGoal<StringMsg>| -> Result<(Int32Msg, Vec<StringMsg>)> {
-                let result = Int32Msg { data: goal.goal.data.len() as i32 };
-                let feedback = vec![StringMsg { data: "Processing...".to_string() }];
+                let result = Int32Msg {
+                    data: goal.goal.data.len() as i32,
+                };
+                let feedback = vec![StringMsg {
+                    data: "Processing...".to_string(),
+                }];
                 Ok((result, feedback))
             },
             |_goal_id: Uuid| -> Result<bool> { Ok(true) },
-        ).await;
+        )
+        .await;
 
         assert!(server.is_ok());
         context.shutdown().await.unwrap();
     }
-} 
+}

@@ -1,10 +1,10 @@
 //! Rerun visualization module for miniROS
-//! 
+//!
 //! Provides data visualization capabilities using Rerun viewer.
 
-use crate::error::{Result, MiniRosError};
+use crate::error::{MiniRosError, Result};
 use rerun::{RecordingStream, RecordingStreamBuilder};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// Visualization configuration
@@ -18,7 +18,7 @@ impl Default for VisualizationConfig {
     fn default() -> Self {
         Self {
             application_id: "miniROS".to_string(),
-            spawn_viewer: false,  // Use memory recording by default
+            spawn_viewer: false, // Use memory recording by default
         }
     }
 }
@@ -39,7 +39,9 @@ impl VisualizationClient {
         } else {
             let (recording, _storage) = RecordingStreamBuilder::new(config.application_id)
                 .memory()
-                .map_err(|e| MiniRosError::Other(format!("Failed to create memory recording: {}", e)))?;
+                .map_err(|e| {
+                    MiniRosError::Other(format!("Failed to create memory recording: {}", e))
+                })?;
             recording
         };
 
@@ -54,7 +56,7 @@ impl VisualizationClient {
         self.recording
             .log(entity_path, &rerun::Scalar::new(value))
             .map_err(|e| MiniRosError::Other(format!("Failed to log scalar: {}", e)))?;
-        
+
         tracing::debug!("Logged scalar {} to entity: {}", value, entity_path);
         Ok(())
     }
@@ -65,41 +67,52 @@ impl VisualizationClient {
         self.recording
             .log(entity_path, &rerun::Points3D::new(points))
             .map_err(|e| MiniRosError::Other(format!("Failed to log points: {}", e)))?;
-        
+
         tracing::debug!("Logged {} points to entity: {}", points_len, entity_path);
         Ok(())
     }
 
-    /// Log transform 
+    /// Log transform
     pub fn log_transform(
-        &self, 
-        entity_path: &str, 
+        &self,
+        entity_path: &str,
         translation: [f32; 3],
-        rotation_quat: [f32; 4]
+        rotation_quat: [f32; 4],
     ) -> Result<()> {
         let transform = rerun::Transform3D::from_translation_rotation(
             translation,
-            rerun::Rotation3D::Quaternion(rotation_quat.into())
+            rerun::Rotation3D::Quaternion(rotation_quat.into()),
         );
 
         self.recording
             .log(entity_path, &transform)
             .map_err(|e| MiniRosError::Other(format!("Failed to log transform: {}", e)))?;
-        
+
         tracing::debug!("Logged transform to entity: {}", entity_path);
         Ok(())
     }
 
     /// Log image
-    pub fn log_image(&self, entity_path: &str, image_data: &[u8], width: u32, height: u32) -> Result<()> {
+    pub fn log_image(
+        &self,
+        entity_path: &str,
+        image_data: &[u8],
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
         // Create a simple RGB image using the correct API
         let image = rerun::Image::from_rgb24(image_data.to_vec(), [width, height]);
 
         self.recording
             .log(entity_path, &image)
             .map_err(|e| MiniRosError::Other(format!("Failed to log image: {}", e)))?;
-        
-        tracing::debug!("Logged image {}x{} to entity: {}", width, height, entity_path);
+
+        tracing::debug!(
+            "Logged image {}x{} to entity: {}",
+            width,
+            height,
+            entity_path
+        );
         Ok(())
     }
 
@@ -114,7 +127,7 @@ impl VisualizationClient {
         self.recording
             .log(entity_path, &rerun::TextLog::new(message))
             .map_err(|e| MiniRosError::Other(format!("Failed to log text: {}", e)))?;
-        
+
         tracing::debug!("Logged text to entity: {}", entity_path);
         Ok(())
     }
@@ -146,22 +159,22 @@ impl VisualizationData {
 /// Robot pose representation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RobotPose {
-    pub position: [f32; 3],      // [x, y, z]
-    pub orientation: [f32; 4],   // quaternion [x, y, z, w]
+    pub position: [f32; 3],    // [x, y, z]
+    pub orientation: [f32; 4], // quaternion [x, y, z, w]
 }
 
 /// Point cloud data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointCloud {
-    pub points: Vec<[f32; 3]>,   // Vector of 3D points
+    pub points: Vec<[f32; 3]>, // Vector of 3D points
 }
 
 /// Laser scan data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LaserScan {
-    pub ranges: Vec<f32>,        // Distance measurements
-    pub angle_min: f32,          // Start angle
-    pub angle_max: f32,          // End angle
+    pub ranges: Vec<f32>, // Distance measurements
+    pub angle_min: f32,   // Start angle
+    pub angle_max: f32,   // End angle
 }
 
 /// Trait for types that can be visualized
@@ -190,22 +203,21 @@ impl Visualizable for LaserScan {
         // Convert laser scan to 3D points for visualization
         let mut points = Vec::new();
         let angle_increment = (self.angle_max - self.angle_min) / self.ranges.len() as f32;
-        
+
         for (i, &range) in self.ranges.iter().enumerate() {
-            if range > 0.0 && range < 100.0 {  // Filter out invalid readings
+            if range > 0.0 && range < 100.0 {
+                // Filter out invalid readings
                 let angle = self.angle_min + i as f32 * angle_increment;
                 let x = range * angle.cos();
                 let y = range * angle.sin();
-                points.push([x, y, 0.0]);  // 2D scan at z=0
+                points.push([x, y, 0.0]); // 2D scan at z=0
             }
         }
-        
+
         client.log_points(entity_path, points)?;
         Ok(())
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -225,4 +237,4 @@ mod tests {
         assert_eq!(data.data_type, "scalar");
         assert!(data.timestamp > 0);
     }
-} 
+}

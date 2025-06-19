@@ -1,22 +1,17 @@
 //! Example 07: Integrated System
-//! 
+//!
 //! This example demonstrates:
 //! - Multiple nodes communicating
 //! - Pub/sub + visualization integration
 //! - Simplified robot system simulation
-//! 
+//!
 //! Run with: cargo run --example 07_integrated_system
 
 use mini_ros::{
+    message::{Float64Msg, StringMsg},
     node::Node,
-    message::{StringMsg, Float64Msg},
     visualization::{
-        VisualizationClient, 
-        VisualizationConfig, 
-        RobotPose, 
-        PointCloud, 
-        LaserScan,
-        Visualizable
+        LaserScan, PointCloud, RobotPose, Visualizable, VisualizationClient, VisualizationConfig,
     },
 };
 
@@ -27,14 +22,14 @@ use tracing::info;
 #[tokio::main]
 async fn main() -> mini_ros::error::Result<()> {
     tracing_subscriber::fmt::init();
-    
+
     info!("=== miniROS-rs Example 07: Integrated System ===");
 
     // Step 1: Start visualization
     info!("🖥️  Starting visualization...");
     let config = VisualizationConfig {
         application_id: "IntegratedSystem".to_string(),
-        spawn_viewer: false,  // Use memory recording for reliability
+        spawn_viewer: false, // Use memory recording for reliability
     };
     let viz_client = VisualizationClient::new(config)?;
     info!("✅ Visualization initialized!");
@@ -47,44 +42,56 @@ async fn main() -> mini_ros::error::Result<()> {
 
     // Step 3: Create communication channels
     info!("📡 Setting up communication...");
-    
+
     // Publishers for integrated system
-    let pose_pub = robot_node.create_publisher::<StringMsg>("/robot/pose").await?;
-    let sensor_pub = robot_node.create_publisher::<Float64Msg>("/robot/sensors/lidar").await?;
-    let status_pub = robot_node.create_publisher::<StringMsg>("/mission/status").await?;
+    let pose_pub = robot_node
+        .create_publisher::<StringMsg>("/robot/pose")
+        .await?;
+    let sensor_pub = robot_node
+        .create_publisher::<Float64Msg>("/robot/sensors/lidar")
+        .await?;
+    let status_pub = robot_node
+        .create_publisher::<StringMsg>("/mission/status")
+        .await?;
 
     info!("✅ Communication channels established!");
 
     // Step 4: Start integrated mission
     info!("🚀 Starting integrated mission...");
-    
+
     // Mission parameters
     let mut robot_x = 0.0;
     let mut robot_y = 0.0;
     let mut robot_yaw = 0.0;
     let waypoints = vec![
         [2.0, 0.0],
-        [2.0, 2.0], 
+        [2.0, 2.0],
         [0.0, 2.0],
         [-2.0, 2.0],
         [-2.0, 0.0],
         [0.0, 0.0],
     ];
-    
+
     let mut current_waypoint = 0;
-    let total_steps = 50;  // Shorter demo
+    let total_steps = 50; // Shorter demo
 
     for step in 0..total_steps {
         let t = step as f64 / 10.0;
-        
+
         // Mission control logic
         if step % 20 == 0 && current_waypoint < waypoints.len() {
-            let status = format!("🎯 Heading to waypoint {} at ({:.1}, {:.1})", 
-                               current_waypoint + 1,
-                               waypoints[current_waypoint][0], 
-                               waypoints[current_waypoint][1]);
-            
-            status_pub.publish(&StringMsg { data: status.clone() }).await?;
+            let status = format!(
+                "🎯 Heading to waypoint {} at ({:.1}, {:.1})",
+                current_waypoint + 1,
+                waypoints[current_waypoint][0],
+                waypoints[current_waypoint][1]
+            );
+
+            status_pub
+                .publish(&StringMsg {
+                    data: status.clone(),
+                })
+                .await?;
             viz_client.log_text("mission/current_objective", &status)?;
             info!("{}", status);
         }
@@ -93,11 +100,11 @@ async fn main() -> mini_ros::error::Result<()> {
         if current_waypoint < waypoints.len() {
             let target_x = waypoints[current_waypoint][0];
             let target_y = waypoints[current_waypoint][1];
-            
+
             let dx = target_x - robot_x;
             let dy = target_y - robot_y;
             let distance = ((dx * dx + dy * dy) as f64).sqrt();
-            
+
             if distance > 0.1 {
                 // Move towards target
                 let speed = 0.05;
@@ -117,8 +124,10 @@ async fn main() -> mini_ros::error::Result<()> {
         }
 
         // Publish robot pose
-        let pose_msg = format!("{{\"x\": {:.3}, \"y\": {:.3}, \"yaw\": {:.3}}}", 
-                              robot_x, robot_y, robot_yaw);
+        let pose_msg = format!(
+            "{{\"x\": {:.3}, \"y\": {:.3}, \"yaw\": {:.3}}}",
+            robot_x, robot_y, robot_yaw
+        );
         pose_pub.publish(&StringMsg { data: pose_msg }).await?;
 
         // Visualize robot pose
@@ -132,20 +141,20 @@ async fn main() -> mini_ros::error::Result<()> {
         // Simulate LiDAR sensor data
         let mut lidar_points = Vec::new();
         let mut lidar_ranges = Vec::new();
-        
+
         for i in 0..360 {
             let angle = (i as f64).to_radians() + robot_yaw;
             let base_range = 3.0 + fastrand::f64() * 2.0;
-            
+
             // Add obstacles
-            let range = if i % 72 == 0 { 
+            let range = if i % 72 == 0 {
                 1.0 + fastrand::f64() * 0.5 // Close obstacle
-            } else { 
-                base_range 
+            } else {
+                base_range
             };
-            
+
             lidar_ranges.push(range as f32);
-            
+
             // Convert to 3D point
             let px = robot_x + range * angle.cos();
             let py = robot_y + range * angle.sin();
@@ -155,7 +164,11 @@ async fn main() -> mini_ros::error::Result<()> {
 
         // Publish sensor data
         let avg_range = lidar_ranges.iter().sum::<f32>() / lidar_ranges.len() as f32;
-        sensor_pub.publish(&Float64Msg { data: avg_range as f64 }).await?;
+        sensor_pub
+            .publish(&Float64Msg {
+                data: avg_range as f64,
+            })
+            .await?;
 
         // Visualize LiDAR data
         let point_cloud = PointCloud {
@@ -173,24 +186,32 @@ async fn main() -> mini_ros::error::Result<()> {
         // Log system metrics
         viz_client.log_scalar("robot/battery", 100.0 - t * 0.5)?;
         viz_client.log_scalar("robot/cpu_usage", 20.0 + 10.0 * (t * 0.1).sin())?;
-        viz_client.log_scalar("mission/progress", (step as f64 / total_steps as f64) * 100.0)?;
+        viz_client.log_scalar(
+            "mission/progress",
+            (step as f64 / total_steps as f64) * 100.0,
+        )?;
         viz_client.log_scalar("sensors/avg_distance", avg_range as f64)?;
 
         // Mission phases
         let phase = match step {
             0..=30 => "🚀 Navigation Phase",
-            31..=60 => "🔍 Exploration Phase", 
+            31..=60 => "🔍 Exploration Phase",
             61..=80 => "📊 Data Collection Phase",
             _ => "🏠 Return Phase",
         };
-        
+
         if step % 10 == 0 {
             viz_client.log_text("mission/phase", phase)?;
         }
 
         if step % 5 == 0 {
-            info!("🤖 Robot at ({:.2}, {:.2}) | Phase: {} | Progress: {:.1}%", 
-                  robot_x, robot_y, phase, (step as f64 / total_steps as f64) * 100.0);
+            info!(
+                "🤖 Robot at ({:.2}, {:.2}) | Phase: {} | Progress: {:.1}%",
+                robot_x,
+                robot_y,
+                phase,
+                (step as f64 / total_steps as f64) * 100.0
+            );
         }
 
         sleep(Duration::from_millis(100)).await;
@@ -198,24 +219,28 @@ async fn main() -> mini_ros::error::Result<()> {
 
     // Mission complete
     let completion_msg = "✅ Integrated mission completed successfully!";
-    status_pub.publish(&StringMsg { data: completion_msg.to_string() }).await?;
+    status_pub
+        .publish(&StringMsg {
+            data: completion_msg.to_string(),
+        })
+        .await?;
     viz_client.log_text("mission/status", completion_msg)?;
     viz_client.log_scalar("mission/progress", 100.0)?;
 
     info!("🎉 Integration demonstration complete!");
     info!("📊 This example showed:");
     info!("   • Multiple node coordination");
-    info!("   • Publisher/subscriber communication");  
+    info!("   • Publisher/subscriber communication");
     info!("   • Real-time 3D visualization");
     info!("   • Sensor data simulation");
     info!("   • Mission control logic");
-    
+
     info!("🎓 Next steps: Explore the visualization in Rerun!");
     info!("💡 You've now seen all major features of miniROS-rs working together!");
 
     // Keep visualization open
     info!("⏳ Keeping visualization open for 20 seconds...");
     sleep(Duration::from_secs(20)).await;
-    
+
     Ok(())
-} 
+}

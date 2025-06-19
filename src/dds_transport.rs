@@ -1,18 +1,18 @@
 //! DDS-based transport layer for ROS2 compatibility
-//! 
+//!
 //! This module provides a simplified DDS (Data Distribution Service) implementation
 //! that maintains compatibility with ROS2's communication patterns while keeping
 //! the implementation minimal and focused on core functionality.
 
-use crate::error::{Result, MiniRosError};
+use crate::error::{MiniRosError, Result};
 use crate::message::Message;
 
+use crossbeam_channel::{Receiver, Sender, unbounded};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, mpsc};
 use tokio::net::UdpSocket;
-use crossbeam_channel::{Receiver, Sender, unbounded};
-use serde::{Serialize, Deserialize};
+use tokio::sync::{RwLock, mpsc};
 
 /// DDS Quality of Service (QoS) policies
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,38 +63,51 @@ pub struct DomainParticipant {
 
 impl DomainParticipant {
     /// Create new domain participant with domain isolation
-    /// 
+    ///
     /// Domain ID provides network isolation between different robot systems.
     /// Valid range: 0-232 (ROS2 compatible)
     pub async fn new(domain_id: u32) -> Result<Self> {
         // Validate domain ID range (ROS2 compatible)
         if domain_id > 232 {
-            return Err(MiniRosError::ConfigError(
-                format!("Domain ID {} exceeds maximum of 232", domain_id)
-            ));
+            return Err(MiniRosError::ConfigError(format!(
+                "Domain ID {} exceeds maximum of 232",
+                domain_id
+            )));
         }
 
         // Use domain-specific port to ensure isolation
         let discovery_port = 7400 + domain_id as u16;
-        
-        tracing::info!("Creating DDS participant for domain {} on port {}", domain_id, discovery_port);
-        
-        let socket = UdpSocket::bind(format!("0.0.0.0:{}", discovery_port)).await
-            .map_err(|e| MiniRosError::NetworkError(
-                format!("Failed to bind DDS socket for domain {}: {}", domain_id, e)
-            ))?;
+
+        tracing::info!(
+            "Creating DDS participant for domain {} on port {}",
+            domain_id,
+            discovery_port
+        );
+
+        let socket = UdpSocket::bind(format!("0.0.0.0:{}", discovery_port))
+            .await
+            .map_err(|e| {
+                MiniRosError::NetworkError(format!(
+                    "Failed to bind DDS socket for domain {}: {}",
+                    domain_id, e
+                ))
+            })?;
 
         // Enable multicast for discovery with domain-specific address
-        let multicast_addr = format!("239.255.{}.{}", 
-                                   (domain_id / 256) as u8, 
-                                   (domain_id % 256) as u8);
-        
-        socket.join_multicast_v4(
-            multicast_addr.parse().unwrap(),
-            "0.0.0.0".parse().unwrap()
-        ).map_err(|e| MiniRosError::NetworkError(
-            format!("Failed to join multicast {} for domain {}: {}", multicast_addr, domain_id, e)
-        ))?;
+        let multicast_addr = format!(
+            "239.255.{}.{}",
+            (domain_id / 256) as u8,
+            (domain_id % 256) as u8
+        );
+
+        socket
+            .join_multicast_v4(multicast_addr.parse().unwrap(), "0.0.0.0".parse().unwrap())
+            .map_err(|e| {
+                MiniRosError::NetworkError(format!(
+                    "Failed to join multicast {} for domain {}: {}",
+                    multicast_addr, domain_id, e
+                ))
+            })?;
 
         tracing::info!("DDS participant joined multicast group: {}", multicast_addr);
 
@@ -113,14 +126,13 @@ impl DomainParticipant {
         topic: &str,
         qos: QosPolicy,
     ) -> Result<DdsPublisher> {
-        let publisher = DdsPublisher::new(
-            self.socket.clone(),
-            topic.to_string(),
-            qos,
-            self.domain_id,
-        ).await?;
+        let publisher =
+            DdsPublisher::new(self.socket.clone(), topic.to_string(), qos, self.domain_id).await?;
 
-        self.publishers.write().await.insert(topic.to_string(), publisher.clone());
+        self.publishers
+            .write()
+            .await
+            .insert(topic.to_string(), publisher.clone());
         Ok(publisher)
     }
 
@@ -130,14 +142,13 @@ impl DomainParticipant {
         topic: &str,
         qos: QosPolicy,
     ) -> Result<DdsSubscriber> {
-        let subscriber = DdsSubscriber::new(
-            self.socket.clone(),
-            topic.to_string(),
-            qos,
-            self.domain_id,
-        ).await?;
+        let subscriber =
+            DdsSubscriber::new(self.socket.clone(), topic.to_string(), qos, self.domain_id).await?;
 
-        self.subscribers.write().await.insert(topic.to_string(), subscriber.clone());
+        self.subscribers
+            .write()
+            .await
+            .insert(topic.to_string(), subscriber.clone());
         Ok(subscriber)
     }
 
@@ -193,15 +204,22 @@ impl DdsPublisher {
             .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
 
         // Multicast to all subscribers in the same domain
-        let multicast_addr = format!("239.255.{}.{}:{}", 
-                                   (self.domain_id / 256) as u8,
-                                   (self.domain_id % 256) as u8,
-                                   7400 + self.domain_id);
-        
-        self.socket.send_to(&serialized, &multicast_addr).await
-            .map_err(|e| MiniRosError::NetworkError(
-                format!("Failed to publish to domain {}: {}", self.domain_id, e)
-            ))?;
+        let multicast_addr = format!(
+            "239.255.{}.{}:{}",
+            (self.domain_id / 256) as u8,
+            (self.domain_id % 256) as u8,
+            7400 + self.domain_id
+        );
+
+        self.socket
+            .send_to(&serialized, &multicast_addr)
+            .await
+            .map_err(|e| {
+                MiniRosError::NetworkError(format!(
+                    "Failed to publish to domain {}: {}",
+                    self.domain_id, e
+                ))
+            })?;
 
         tracing::debug!("Published DDS message on topic: {}", self.topic);
         Ok(())
@@ -328,12 +346,16 @@ impl DdsTransport {
 
     /// Create publisher with default QoS
     pub async fn create_publisher<T: Message>(&self, topic: &str) -> Result<DdsPublisher> {
-        self.participant.create_publisher::<T>(topic, QosPolicy::default()).await
+        self.participant
+            .create_publisher::<T>(topic, QosPolicy::default())
+            .await
     }
 
     /// Create subscriber with default QoS
     pub async fn create_subscriber<T: Message>(&self, topic: &str) -> Result<DdsSubscriber> {
-        self.participant.create_subscriber::<T>(topic, QosPolicy::default()).await
+        self.participant
+            .create_subscriber::<T>(topic, QosPolicy::default())
+            .await
     }
 
     /// Create publisher with custom QoS
@@ -382,11 +404,17 @@ mod tests {
     #[tokio::test]
     async fn test_dds_publisher_subscriber() {
         let transport = DdsTransport::new(1).await.unwrap();
-        
-        let publisher = transport.create_publisher::<StringMsg>("test_topic").await.unwrap();
-        let subscriber = transport.create_subscriber::<StringMsg>("test_topic").await.unwrap();
-        
+
+        let publisher = transport
+            .create_publisher::<StringMsg>("test_topic")
+            .await
+            .unwrap();
+        let subscriber = transport
+            .create_subscriber::<StringMsg>("test_topic")
+            .await
+            .unwrap();
+
         assert_eq!(publisher.topic(), "test_topic");
         assert_eq!(subscriber.topic(), "test_topic");
     }
-} 
+}

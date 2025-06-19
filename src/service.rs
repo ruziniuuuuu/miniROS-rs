@@ -2,7 +2,7 @@
 
 use crate::core::Context;
 
-use crate::error::{Result, MiniRosError};
+use crate::error::{MiniRosError, Result};
 use crate::message::Message;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
@@ -27,7 +27,7 @@ enum ServiceResponse<T> {
 }
 
 /// Service provider that handles incoming requests
-/// 
+///
 /// Services provide request/response communication pattern.
 /// Unlike pub/sub, services are synchronous and bidirectional.
 pub struct Service<Req: Message, Res: Message> {
@@ -119,13 +119,20 @@ impl<Req: Message, Res: Message> Service<Req, Res> {
         let service_request: ServiceMessage<Req> = match bincode::deserialize(&raw_data) {
             Ok(req) => req,
             Err(e) => {
-                tracing::warn!("Failed to deserialize service request for {}: {}", service_name, e);
+                tracing::warn!(
+                    "Failed to deserialize service request for {}: {}",
+                    service_name,
+                    e
+                );
                 return;
             }
         };
 
-        tracing::debug!("Processing service request {} for service: {}", 
-                       service_request.request_id, service_name);
+        tracing::debug!(
+            "Processing service request {} for service: {}",
+            service_request.request_id,
+            service_name
+        );
 
         // Process request
         let response_data = match callback(service_request.data) {
@@ -149,8 +156,11 @@ impl<Req: Message, Res: Message> Service<Req, Res> {
 
         // Send response back (this is simplified - in reality we'd need response addressing)
         // For now, we'll just log that we processed the request
-        tracing::debug!("Processed service request {} for service: {}", 
-                       service_request.request_id, service_name);
+        tracing::debug!(
+            "Processed service request {} for service: {}",
+            service_request.request_id,
+            service_name
+        );
     }
 
     /// Get the service name
@@ -191,14 +201,17 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
 
     /// Call the service with a request and wait for response
     pub async fn call(&self, request: Req) -> Result<Res> {
-        self.call_with_timeout(request, Duration::from_secs(5)).await
+        self.call_with_timeout(request, Duration::from_secs(5))
+            .await
     }
 
     /// Call the service with a timeout
     pub async fn call_with_timeout(&self, request: Req, timeout_duration: Duration) -> Result<Res> {
         timeout(timeout_duration, self.call_internal(request))
             .await
-            .map_err(|_| MiniRosError::Timeout(format!("Service call to '{}' timed out", self.service_name)))?
+            .map_err(|_| {
+                MiniRosError::Timeout(format!("Service call to '{}' timed out", self.service_name))
+            })?
     }
 
     async fn call_internal(&self, request: Req) -> Result<Res> {
@@ -234,9 +247,11 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
         // For now, return a dummy response since we don't have full response handling
         // In a complete implementation, we'd wait for the response with the matching request_id
         tracing::debug!("Service call sent to: {}", self.service_name);
-        
+
         // This is a placeholder - in reality we'd wait for and deserialize the actual response
-        Err(MiniRosError::NetworkError("Service response handling not fully implemented".to_string()))
+        Err(MiniRosError::NetworkError(
+            "Service response handling not fully implemented".to_string(),
+        ))
     }
 
     /// Get the service name
@@ -247,22 +262,24 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
     /// Check if the service is available
     pub async fn is_available(&self) -> bool {
         let discovery = self.context.inner.discovery.read();
-        !discovery.get_service_providers(&self.service_name).is_empty()
+        !discovery
+            .get_service_providers(&self.service_name)
+            .is_empty()
     }
 
     /// Wait for the service to become available
     pub async fn wait_for_service(&self, timeout_duration: Duration) -> Result<()> {
         let start = std::time::Instant::now();
-        
+
         while start.elapsed() < timeout_duration {
             if self.is_available().await {
                 return Ok(());
             }
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
-        
+
         Err(MiniRosError::Timeout(format!(
-            "Service '{}' did not become available within {:?}", 
+            "Service '{}' did not become available within {:?}",
             self.service_name, timeout_duration
         )))
     }
@@ -271,8 +288,8 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::message::{StringMsg, Int32Msg};
     use crate::core::Context;
+    use crate::message::{Int32Msg, StringMsg};
 
     #[tokio::test]
     async fn test_service_creation() {
@@ -283,10 +300,14 @@ mod tests {
             "test_service",
             "127.0.0.1:0",
             |req: StringMsg| -> Result<Int32Msg> {
-                Ok(Int32Msg { data: req.data.len() as i32 })
+                Ok(Int32Msg {
+                    data: req.data.len() as i32,
+                })
             },
             context.clone(),
-        ).await.unwrap();
+        )
+        .await
+        .unwrap();
 
         assert_eq!(service.name(), "test_service");
 
@@ -298,11 +319,13 @@ mod tests {
         let context = Context::with_domain_id(41).unwrap();
         context.init().await.unwrap();
 
-        let client = ServiceClient::<StringMsg, Int32Msg>::new("test_service", context.clone()).await.unwrap();
-        
+        let client = ServiceClient::<StringMsg, Int32Msg>::new("test_service", context.clone())
+            .await
+            .unwrap();
+
         assert_eq!(client.service_name(), "test_service");
         assert!(!client.is_available().await); // No service running
 
         context.shutdown().await.unwrap();
     }
-} 
+}

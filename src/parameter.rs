@@ -1,10 +1,10 @@
 //! Parameter system for dynamic configuration
-//! 
+//!
 //! This module provides parameter management capabilities similar to ROS2,
 //! allowing runtime configuration of nodes and services.
 
-use crate::error::{Result, MiniRosError};
-use serde::{Serialize, Deserialize};
+use crate::error::{MiniRosError, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
@@ -65,9 +65,11 @@ impl ParameterServer {
 
     /// Set a parameter value
     pub fn set_parameter(&self, name: &str, value: ParameterValue) -> Result<()> {
-        let mut params = self.parameters.write()
+        let mut params = self
+            .parameters
+            .write()
             .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
-        
+
         params.insert(name.to_string(), value);
         tracing::debug!("Set parameter: {} = {:?}", name, params.get(name));
         Ok(())
@@ -75,41 +77,51 @@ impl ParameterServer {
 
     /// Get a parameter value
     pub fn get_parameter(&self, name: &str) -> Result<Option<ParameterValue>> {
-        let params = self.parameters.read()
+        let params = self
+            .parameters
+            .read()
             .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
-        
+
         Ok(params.get(name).cloned())
     }
 
     /// List all parameter names
     pub fn list_parameters(&self) -> Result<Vec<String>> {
-        let params = self.parameters.read()
+        let params = self
+            .parameters
+            .read()
             .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
-        
+
         Ok(params.keys().cloned().collect())
     }
 
     /// Check if parameter exists
     pub fn has_parameter(&self, name: &str) -> Result<bool> {
-        let params = self.parameters.read()
+        let params = self
+            .parameters
+            .read()
             .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
-        
+
         Ok(params.contains_key(name))
     }
 
     /// Delete a parameter
     pub fn delete_parameter(&self, name: &str) -> Result<bool> {
-        let mut params = self.parameters.write()
+        let mut params = self
+            .parameters
+            .write()
             .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
-        
+
         Ok(params.remove(name).is_some())
     }
 
     /// Get all parameters as a map
     pub fn get_all_parameters(&self) -> Result<HashMap<String, ParameterValue>> {
-        let params = self.parameters.read()
+        let params = self
+            .parameters
+            .read()
             .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
-        
+
         Ok(params.clone())
     }
 }
@@ -143,25 +155,31 @@ impl ParameterClient {
 
     /// Get a parameter value
     pub fn get_parameter(&self, name: &str) -> Result<Option<ParameterValue>> {
-        let params = self.parameters.read()
+        let params = self
+            .parameters
+            .read()
             .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
-        
+
         Ok(params.get(name).cloned())
     }
 
     /// List all parameters
     pub fn list_parameters(&self) -> Result<HashMap<String, ParameterValue>> {
-        let params = self.parameters.read()
+        let params = self
+            .parameters
+            .read()
             .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
-        
+
         Ok(params.clone())
     }
 
     /// Check if parameter exists
     pub fn has_parameter(&self, name: &str) -> Result<bool> {
-        let params = self.parameters.read()
+        let params = self
+            .parameters
+            .read()
             .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
-        
+
         Ok(params.contains_key(name))
     }
 }
@@ -179,19 +197,47 @@ mod tests {
     #[test]
     fn test_parameter_server_basic() {
         let server = ParameterServer::new();
-        
+
         // Set parameters
-        assert!(server.set_parameter("test.bool", ParameterValue::Bool(true)).is_ok());
-        assert!(server.set_parameter("test.int", ParameterValue::Int(42)).is_ok());
-        assert!(server.set_parameter("test.float", ParameterValue::Float(3.14)).is_ok());
-        assert!(server.set_parameter("test.string", ParameterValue::String("hello".to_string())).is_ok());
-        
+        assert!(
+            server
+                .set_parameter("test.bool", ParameterValue::Bool(true))
+                .is_ok()
+        );
+        assert!(
+            server
+                .set_parameter("test.int", ParameterValue::Int(42))
+                .is_ok()
+        );
+        assert!(
+            server
+                .set_parameter("test.float", ParameterValue::Float(3.14))
+                .is_ok()
+        );
+        assert!(
+            server
+                .set_parameter("test.string", ParameterValue::String("hello".to_string()))
+                .is_ok()
+        );
+
         // Get parameters
-        assert_eq!(server.get_parameter("test.bool").unwrap(), Some(ParameterValue::Bool(true)));
-        assert_eq!(server.get_parameter("test.int").unwrap(), Some(ParameterValue::Int(42)));
-        assert_eq!(server.get_parameter("test.float").unwrap(), Some(ParameterValue::Float(3.14)));
-        assert_eq!(server.get_parameter("test.string").unwrap(), Some(ParameterValue::String("hello".to_string())));
-        
+        assert_eq!(
+            server.get_parameter("test.bool").unwrap(),
+            Some(ParameterValue::Bool(true))
+        );
+        assert_eq!(
+            server.get_parameter("test.int").unwrap(),
+            Some(ParameterValue::Int(42))
+        );
+        assert_eq!(
+            server.get_parameter("test.float").unwrap(),
+            Some(ParameterValue::Float(3.14))
+        );
+        assert_eq!(
+            server.get_parameter("test.string").unwrap(),
+            Some(ParameterValue::String("hello".to_string()))
+        );
+
         // Non-existent parameter
         assert_eq!(server.get_parameter("non.existent").unwrap(), None);
     }
@@ -199,26 +245,33 @@ mod tests {
     #[test]
     fn test_parameter_client() {
         let server = ParameterServer::new();
-        server.set_parameter("test.value", ParameterValue::Int(123)).unwrap();
-        
+        server
+            .set_parameter("test.value", ParameterValue::Int(123))
+            .unwrap();
+
         let client = ParameterClient::from_server(&server);
-        assert_eq!(client.get_parameter("test.value").unwrap(), Some(ParameterValue::Int(123)));
+        assert_eq!(
+            client.get_parameter("test.value").unwrap(),
+            Some(ParameterValue::Int(123))
+        );
     }
 
     #[test]
     fn test_parameter_operations() {
         let server = ParameterServer::new();
-        
+
         // Test parameter existence
         assert!(!server.has_parameter("test.param").unwrap());
-        
-        server.set_parameter("test.param", ParameterValue::String("value".to_string())).unwrap();
+
+        server
+            .set_parameter("test.param", ParameterValue::String("value".to_string()))
+            .unwrap();
         assert!(server.has_parameter("test.param").unwrap());
-        
+
         // Test parameter deletion
         assert!(server.delete_parameter("test.param").unwrap());
         assert!(!server.has_parameter("test.param").unwrap());
-        
+
         // Test deleting non-existent parameter
         assert!(!server.delete_parameter("non.existent").unwrap());
     }
@@ -226,20 +279,49 @@ mod tests {
     #[test]
     fn test_parameter_arrays() {
         let server = ParameterServer::new();
-        
+
         let string_array = vec!["a".to_string(), "b".to_string(), "c".to_string()];
         let int_array = vec![1, 2, 3];
         let float_array = vec![1.1, 2.2, 3.3];
         let bool_array = vec![true, false, true];
-        
-        server.set_parameter("arrays.strings", ParameterValue::StringArray(string_array.clone())).unwrap();
-        server.set_parameter("arrays.ints", ParameterValue::IntArray(int_array.clone())).unwrap();
-        server.set_parameter("arrays.floats", ParameterValue::FloatArray(float_array.clone())).unwrap();
-        server.set_parameter("arrays.bools", ParameterValue::BoolArray(bool_array.clone())).unwrap();
-        
-        assert_eq!(server.get_parameter("arrays.strings").unwrap(), Some(ParameterValue::StringArray(string_array)));
-        assert_eq!(server.get_parameter("arrays.ints").unwrap(), Some(ParameterValue::IntArray(int_array)));
-        assert_eq!(server.get_parameter("arrays.floats").unwrap(), Some(ParameterValue::FloatArray(float_array)));
-        assert_eq!(server.get_parameter("arrays.bools").unwrap(), Some(ParameterValue::BoolArray(bool_array)));
+
+        server
+            .set_parameter(
+                "arrays.strings",
+                ParameterValue::StringArray(string_array.clone()),
+            )
+            .unwrap();
+        server
+            .set_parameter("arrays.ints", ParameterValue::IntArray(int_array.clone()))
+            .unwrap();
+        server
+            .set_parameter(
+                "arrays.floats",
+                ParameterValue::FloatArray(float_array.clone()),
+            )
+            .unwrap();
+        server
+            .set_parameter(
+                "arrays.bools",
+                ParameterValue::BoolArray(bool_array.clone()),
+            )
+            .unwrap();
+
+        assert_eq!(
+            server.get_parameter("arrays.strings").unwrap(),
+            Some(ParameterValue::StringArray(string_array))
+        );
+        assert_eq!(
+            server.get_parameter("arrays.ints").unwrap(),
+            Some(ParameterValue::IntArray(int_array))
+        );
+        assert_eq!(
+            server.get_parameter("arrays.floats").unwrap(),
+            Some(ParameterValue::FloatArray(float_array))
+        );
+        assert_eq!(
+            server.get_parameter("arrays.bools").unwrap(),
+            Some(ParameterValue::BoolArray(bool_array))
+        );
     }
-} 
+}

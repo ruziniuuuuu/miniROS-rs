@@ -1,15 +1,15 @@
 //! Publisher implementation for MiniROS
 
 use crate::core::Context;
-use crate::error::{Result, MiniRosError};
+use crate::error::{MiniRosError, Result};
 use crate::message::Message;
 
 use std::marker::PhantomData;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Publisher for sending messages to a topic
-/// 
+///
 /// Publishers send messages to subscribers interested in the same topic.
 /// The communication is decoupled - publishers don't need to know about subscribers.
 pub struct Publisher<T: Message> {
@@ -23,7 +23,11 @@ pub struct Publisher<T: Message> {
 impl<T: Message> Publisher<T> {
     /// Create a new publisher for the given topic
     pub(crate) async fn new(topic: &str, endpoint: &str, context: Context) -> Result<Self> {
-        tracing::debug!("Creating publisher for topic: {} on endpoint: {}", topic, endpoint);
+        tracing::debug!(
+            "Creating publisher for topic: {} on endpoint: {}",
+            topic,
+            endpoint
+        );
 
         // Start listening on the endpoint for subscriber connections
         {
@@ -44,7 +48,7 @@ impl<T: Message> Publisher<T> {
     pub async fn publish(&self, message: &T) -> Result<()> {
         // Increment sequence number
         let seq = self.sequence.fetch_add(1, Ordering::Relaxed);
-        
+
         tracing::debug!("Publishing message {} to topic: {}", seq, self.topic);
 
         // Serialize the message
@@ -67,13 +71,11 @@ impl<T: Message> Publisher<T> {
         for (_node_info, topic_info) in subscribers {
             let endpoint = topic_info.endpoint.clone();
             let data_clone = data.clone();
-            
+
             // Create future for sending to this subscriber
             let transport_ref = &*transport;
-            let future = async move {
-                transport_ref.send(&endpoint, &data_clone).await
-            };
-            
+            let future = async move { transport_ref.send(&endpoint, &data_clone).await };
+
             send_futures.push(future);
         }
 
@@ -92,8 +94,10 @@ impl<T: Message> Publisher<T> {
         if error_count > 0 {
             tracing::warn!("Failed to send to {} subscribers", error_count);
         } else {
-            tracing::debug!("Successfully published message to {} subscribers", 
-                           discovery.get_subscribers(&self.topic).len());
+            tracing::debug!(
+                "Successfully published message to {} subscribers",
+                discovery.get_subscribers(&self.topic).len()
+            );
         }
 
         Ok(())
@@ -130,19 +134,21 @@ impl<T: Message> Clone for Publisher<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::message::StringMsg;
     use crate::core::Context;
+    use crate::message::StringMsg;
 
     #[tokio::test]
     async fn test_publisher_creation() {
         let context = Context::with_domain_id(20).unwrap();
         context.init().await.unwrap();
-        
-        let publisher = Publisher::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone()).await.unwrap();
-        
+
+        let publisher = Publisher::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone())
+            .await
+            .unwrap();
+
         assert_eq!(publisher.topic(), "test_topic");
         assert_eq!(publisher.sequence(), 0);
-        
+
         context.shutdown().await.unwrap();
     }
 
@@ -150,16 +156,20 @@ mod tests {
     async fn test_publisher_publish() {
         let context = Context::with_domain_id(21).unwrap();
         context.init().await.unwrap();
-        
-        let publisher = Publisher::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone()).await.unwrap();
-        
-        let message = StringMsg { data: "Hello, World!".to_string() };
-        
+
+        let publisher = Publisher::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone())
+            .await
+            .unwrap();
+
+        let message = StringMsg {
+            data: "Hello, World!".to_string(),
+        };
+
         // Should succeed even with no subscribers
         publisher.publish(&message).await.unwrap();
-        
+
         assert_eq!(publisher.sequence(), 1);
-        
+
         context.shutdown().await.unwrap();
     }
 
@@ -167,16 +177,20 @@ mod tests {
     async fn test_publisher_sequence() {
         let context = Context::with_domain_id(22).unwrap();
         context.init().await.unwrap();
-        
-        let publisher = Publisher::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone()).await.unwrap();
-        
-        let message = StringMsg { data: "test".to_string() };
-        
+
+        let publisher = Publisher::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone())
+            .await
+            .unwrap();
+
+        let message = StringMsg {
+            data: "test".to_string(),
+        };
+
         for i in 1..=5 {
             publisher.publish(&message).await.unwrap();
             assert_eq!(publisher.sequence(), i);
         }
-        
+
         context.shutdown().await.unwrap();
     }
 }

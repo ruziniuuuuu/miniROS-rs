@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Trait for all MiniROS messages
-/// 
+///
 /// Messages must be serializable and deserializable for network transport
 pub trait Message: Send + Sync + Serialize + for<'de> Deserialize<'de> + Clone + 'static {}
 
@@ -120,7 +120,9 @@ mod tests {
 
     #[test]
     fn test_built_in_messages() {
-        let string_msg = StringMsg { data: "test".to_string() };
+        let string_msg = StringMsg {
+            data: "test".to_string(),
+        };
         let int_msg = Int32Msg { data: 42 };
         let float_msg = Float64Msg { data: 3.14 };
         let bool_msg = BoolMsg { data: true };
