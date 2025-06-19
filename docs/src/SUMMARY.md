@@ -10,6 +10,7 @@
 
 # Advanced Topics
 
+- [Transport Architecture](./transport-architecture.md)
 - [DDS Transport](./dds-transport.md)
 - [Performance Optimization](./performance.md)
 - [Cross-Platform Development](./cross-platform.md)

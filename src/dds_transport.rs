@@ -62,17 +62,41 @@ pub struct DomainParticipant {
 }
 
 impl DomainParticipant {
-    /// Create new domain participant
+    /// Create new domain participant with domain isolation
+    /// 
+    /// Domain ID provides network isolation between different robot systems.
+    /// Valid range: 0-232 (ROS2 compatible)
     pub async fn new(domain_id: u32) -> Result<Self> {
-        let discovery_port = 7400 + domain_id as u16;
-        let socket = UdpSocket::bind(format!("0.0.0.0:{}", discovery_port)).await
-            .map_err(|e| MiniRosError::NetworkError(format!("Failed to bind DDS socket: {}", e)))?;
+        // Validate domain ID range (ROS2 compatible)
+        if domain_id > 232 {
+            return Err(MiniRosError::ConfigError(
+                format!("Domain ID {} exceeds maximum of 232", domain_id)
+            ));
+        }
 
-        // Enable multicast for discovery
+        // Use domain-specific port to ensure isolation
+        let discovery_port = 7400 + domain_id as u16;
+        
+        tracing::info!("Creating DDS participant for domain {} on port {}", domain_id, discovery_port);
+        
+        let socket = UdpSocket::bind(format!("0.0.0.0:{}", discovery_port)).await
+            .map_err(|e| MiniRosError::NetworkError(
+                format!("Failed to bind DDS socket for domain {}: {}", domain_id, e)
+            ))?;
+
+        // Enable multicast for discovery with domain-specific address
+        let multicast_addr = format!("239.255.{}.{}", 
+                                   (domain_id / 256) as u8, 
+                                   (domain_id % 256) as u8);
+        
         socket.join_multicast_v4(
-            "239.255.0.1".parse().unwrap(),
+            multicast_addr.parse().unwrap(),
             "0.0.0.0".parse().unwrap()
-        ).map_err(|e| MiniRosError::NetworkError(format!("Failed to join multicast: {}", e)))?;
+        ).map_err(|e| MiniRosError::NetworkError(
+            format!("Failed to join multicast {} for domain {}: {}", multicast_addr, domain_id, e)
+        ))?;
+
+        tracing::info!("DDS participant joined multicast group: {}", multicast_addr);
 
         Ok(Self {
             domain_id,
@@ -168,10 +192,16 @@ impl DdsPublisher {
         let serialized = bincode::serialize(&dds_message)
             .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
 
-        // Multicast to all subscribers
-        let multicast_addr = format!("239.255.0.1:{}", 7400 + self.domain_id);
+        // Multicast to all subscribers in the same domain
+        let multicast_addr = format!("239.255.{}.{}:{}", 
+                                   (self.domain_id / 256) as u8,
+                                   (self.domain_id % 256) as u8,
+                                   7400 + self.domain_id);
+        
         self.socket.send_to(&serialized, &multicast_addr).await
-            .map_err(|e| MiniRosError::NetworkError(format!("Failed to publish: {}", e)))?;
+            .map_err(|e| MiniRosError::NetworkError(
+                format!("Failed to publish to domain {}: {}", self.domain_id, e)
+            ))?;
 
         tracing::debug!("Published DDS message on topic: {}", self.topic);
         Ok(())

@@ -1,13 +1,14 @@
-//! Example 01: Basic Publisher-Subscriber Communication
+//! Example 01: Basic Publisher-Subscriber Communication with Domain Isolation
 //! 
 //! This is your first miniROS-rs example. It demonstrates:
-//! - Creating nodes
+//! - Creating nodes with domain isolation
 //! - Basic pub/sub communication
 //! - Using built-in message types
-//! - DDS transport support
+//! - DDS transport support with domain separation
 //! 
 //! Run with: cargo run --example 01_basic_pubsub
-//! Run with DDS: cargo run --example 01_basic_pubsub --features dds-transport
+//! DDS transport: cargo run --example 01_basic_pubsub --features dds-transport
+//! Custom domain: DOMAIN_ID=10 cargo run --example 01_basic_pubsub --features dds-transport
 
 use mini_ros::{
     node::Node,
@@ -77,9 +78,15 @@ async fn run_node_example() -> mini_ros::error::Result<()> {
 
 #[cfg(feature = "dds-transport")]
 async fn run_dds_example() -> mini_ros::error::Result<()> {
-    // Create DDS transport with domain ID 0
-    let transport = DdsTransport::new(0).await?;
-    info!("🌐 DDS transport initialized for domain 0");
+    // Get domain ID from environment or use default
+    let domain_id = std::env::var("DOMAIN_ID")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    
+    // Create DDS transport with specified domain ID
+    let transport = DdsTransport::new(domain_id).await?;
+    info!("🌐 DDS transport initialized for domain {} (isolated network)", domain_id);
 
     // Create publisher with default QoS
     let publisher = transport.create_publisher::<StringMsg>("greetings").await?;
