@@ -7,6 +7,9 @@ use crate::message::Message;
 use crossbeam_channel::Receiver;
 use std::marker::PhantomData;
 use std::sync::Arc;
+
+/// Type alias for message callback to reduce complexity
+type MessageCallback<T> = Arc<parking_lot::Mutex<Option<Box<dyn Fn(T) + Send + Sync + 'static>>>>;
 use parking_lot::Mutex;
 
 /// Subscriber for receiving messages from a topic
@@ -17,7 +20,7 @@ pub struct Subscriber<T: Message> {
     topic: String,
     context: Context,
     message_receiver: Option<Receiver<Vec<u8>>>,
-    callback: Arc<Mutex<Option<Box<dyn Fn(T) + Send + Sync + 'static>>>>,
+    callback: MessageCallback<T>,
     _phantom: PhantomData<T>,
 }
 

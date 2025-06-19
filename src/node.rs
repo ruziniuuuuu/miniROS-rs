@@ -205,14 +205,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_creation() {
-        let mut node = Node::new("test_node").unwrap();
+        let node = Node::new("test_node").unwrap();
         assert_eq!(node.name(), "test_node");
     }
 
     #[tokio::test]
     async fn test_node_with_context() {
         let context = Context::with_domain_id(10).unwrap();
-        let mut node = Node::with_context("test_node", context).unwrap();
+        let node = Node::with_context("test_node", context).unwrap();
         assert_eq!(node.name(), "test_node");
     }
 

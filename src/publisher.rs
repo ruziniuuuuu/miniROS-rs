@@ -32,21 +32,35 @@ impl<T: Message> Publisher<T> {
     }
 
     /// Publish a message to all subscribers
-    #[cfg(feature = "tcp-transport")]
     pub async fn publish(&self, message: &T) -> Result<()> {
         // Increment sequence number
         let seq = self.sequence.fetch_add(1, Ordering::Relaxed);
 
         tracing::debug!("Publishing message {} to topic: {}", seq, self.topic);
 
-        // Serialize the message
-        let data = bincode::serialize(message)
-            .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
-
-        // Use the message broker for local communication
+        // Try DDS transport first if available
+        #[cfg(feature = "dds-transport")]
         {
-            let transport = self.context.inner.transport.read();
-            let sent_count = transport.broker().publish(&self.topic, data)?;
+            let dds_transport_lock = self.context.inner.dds_transport.read();
+            if let Some(dds_transport) = dds_transport_lock.as_ref() {
+                // Create a DDS publisher and publish the message
+                let dds_publisher = dds_transport.create_publisher::<T>(&self.topic).await?;
+                return dds_publisher.publish(message).await;
+            }
+        }
+
+        // Fallback to TCP transport or memory broker
+        #[cfg(feature = "tcp-transport")]
+        {
+            // Serialize the message
+            let data = bincode::serialize(message)
+                .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
+
+            // Use the message broker for local communication
+            let sent_count = {
+                let transport = self.context.inner.transport.read();
+                transport.broker().publish(&self.topic, data.clone())?
+            }; // Lock is released here
             
             if sent_count > 0 {
                 tracing::debug!(
@@ -56,88 +70,74 @@ impl<T: Message> Publisher<T> {
             } else {
                 tracing::debug!("No local subscribers found for topic: {}", self.topic);
             }
-        }
 
-        // Also try to send to remote subscribers via discovery
-        let remote_subscribers = {
-            let discovery = self.context.inner.discovery.read();
-            discovery.get_subscribers(&self.topic)
-        };
+            // Also try to send to remote subscribers via discovery
+            let remote_subscribers = {
+                let discovery = self.context.inner.discovery.read();
+                discovery.get_subscribers(&self.topic)
+            }; // Lock is released here
 
-        if !remote_subscribers.is_empty() {
-            let data = bincode::serialize(message)
-                .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
-            
-            let mut remote_sent = 0;
-            let mut remote_failed = 0;
-            
-            for (_node_info, topic_info) in &remote_subscribers {
-                let transport = self.context.inner.transport.read();
-                match transport.send(&topic_info.endpoint, &data).await {
-                    Ok(()) => remote_sent += 1,
-                    Err(e) => {
-                        tracing::debug!("Failed to send to remote subscriber {}: {}", topic_info.endpoint, e);
-                        remote_failed += 1;
+            if !remote_subscribers.is_empty() {
+                let mut remote_sent = 0;
+                let mut remote_failed = 0;
+                
+                // Collect all endpoints first to avoid holding lock across await
+                let endpoints: Vec<String> = remote_subscribers
+                    .iter()
+                    .map(|(_, topic_info)| topic_info.endpoint.clone())
+                    .collect();
+                
+                for endpoint in endpoints {
+                    // For each endpoint, send without holding the transport lock across await
+                    // Note: This is a simplified approach - in practice, we'd want better
+                    // connection management and error handling
+                    match tokio::net::UdpSocket::bind("0.0.0.0:0").await {
+                        Ok(socket) => {
+                            if let Ok(addr) = endpoint.parse::<std::net::SocketAddr>() {
+                                match socket.send_to(&data, addr).await {
+                                    Ok(_) => remote_sent += 1,
+                                    Err(e) => {
+                                        tracing::debug!("Failed to send to remote subscriber {}: {}", endpoint, e);
+                                        remote_failed += 1;
+                                    }
+                                }
+                            } else {
+                                tracing::debug!("Invalid endpoint format: {}", endpoint);
+                                remote_failed += 1;
+                            }
+                        }
+                        Err(e) => {
+                            tracing::debug!("Failed to create socket for {}: {}", endpoint, e);
+                            remote_failed += 1;
+                        }
                     }
                 }
-            }
-            
-            if remote_sent > 0 {
-                tracing::debug!("Successfully sent to {} remote subscribers", remote_sent);
-            }
-            if remote_failed > 0 {
-                tracing::debug!("Failed to send to {} remote subscribers", remote_failed);
+                
+                if remote_sent > 0 {
+                    tracing::debug!("Successfully sent to {} remote subscribers", remote_sent);
+                }
+                if remote_failed > 0 {
+                    tracing::debug!("Failed to send to {} remote subscribers", remote_failed);
+                }
             }
         }
 
-        Ok(())
-    }
-
-    /// Publish a message to all subscribers (DDS transport version)
-    #[cfg(feature = "dds-transport")]
-    pub async fn publish(&self, message: &T) -> Result<()> {
-        // Increment sequence number
-        let seq = self.sequence.fetch_add(1, Ordering::Relaxed);
-
-        tracing::debug!("Publishing message {} to topic: {}", seq, self.topic);
-
-        // Use DDS transport if available
+        // If neither DDS nor TCP transport is available, use zenoh transport as fallback
+        #[cfg(not(any(feature = "dds-transport", feature = "tcp-transport")))]
         {
-            let dds_transport_lock = self.context.inner.dds_transport.read();
-            if let Some(dds_transport) = dds_transport_lock.as_ref() {
-                return dds_transport.publish(&self.topic, message).await;
+            // Serialize the message
+            let data = bincode::serialize(message)
+                .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
+
+            // Use zenoh transport
+            let zenoh_transport_lock = self.context.inner.zenoh_transport.read();
+            if let Some(zenoh_transport) = zenoh_transport_lock.as_ref() {
+                zenoh_transport.publish(&self.topic, data).await?;
+                tracing::debug!("Published message via Zenoh transport");
+            } else {
+                tracing::warn!("No transport available for publishing");
             }
         }
-
-        // Fallback to other transports
-        let data = bincode::serialize(message)
-            .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
-
-        // Find all subscribers for this topic
-        let subscribers = {
-            let discovery = self.context.inner.discovery.read();
-            discovery.get_subscribers(&self.topic)
-        };
-
-        if subscribers.is_empty() {
-            tracing::debug!("No subscribers found for topic: {}", self.topic);
-            return Ok(());
-        }
-
-        // Send to all subscribers
-        let mut sent_count = 0;
-        let mut error_count = 0;
-        
-        for (_node_info, topic_info) in &subscribers {
-            // Since we don't have transport in DDS mode, this is placeholder
-            tracing::debug!("Would send to subscriber at: {}", topic_info.endpoint);
-            sent_count += 1;
-        }
-
-        tracing::debug!(
-            "Successfully published message to {} subscribers",
-            sent_count
-        );
 
         Ok(())
     }

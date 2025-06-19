@@ -7,12 +7,12 @@
 use crate::error::{MiniRosError, Result};
 use crate::message::Message;
 
-use crossbeam_channel::{Receiver, Sender, unbounded};
+use crossbeam_channel::{Receiver, unbounded};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::net::UdpSocket;
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::RwLock;
 
 /// DDS Quality of Service (QoS) policies
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -375,6 +375,29 @@ impl DdsTransport {
     /// Get domain ID
     pub fn domain_id(&self) -> u32 {
         self.participant.domain_id()
+    }
+
+    /// Publish a message to a topic using DDS transport
+    /// This is a convenience method that creates a temporary publisher
+    pub async fn publish<T: Message>(&self, topic: &str, message: &T) -> Result<()> {
+        // Get or create publisher for this topic
+        let publisher = {
+            let publishers = self.participant.publishers.read().await;
+            if let Some(existing_publisher) = publishers.get(topic) {
+                existing_publisher.clone()
+            } else {
+                // Drop read lock and create new publisher
+                drop(publishers);
+                let new_publisher = self.create_publisher::<T>(topic).await?;
+                
+                // Cache the publisher for future use
+                self.participant.publishers.write().await.insert(topic.to_string(), new_publisher.clone());
+                new_publisher
+            }
+        };
+        
+        // Publish the message
+        publisher.publish(message).await
     }
 
     /// Shutdown DDS transport

@@ -176,8 +176,8 @@ python simple_param.py
 - [x] Examples and documentation
 
 ### Phase 2: Advanced 🚧
-- [ ] Actions (goal-based tasks)
-- [ ] Parameters (dynamic config)
+- [x] Actions (goal-based tasks)
+- [x] Parameters (dynamic config)
 - [ ] Visualization (Rerun integration)
 - [ ] Cross-language type system
 - [ ] Performance benchmarks
