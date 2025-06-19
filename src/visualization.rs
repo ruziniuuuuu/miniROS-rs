@@ -18,7 +18,7 @@ impl Default for VisualizationConfig {
     fn default() -> Self {
         Self {
             application_id: "miniROS".to_string(),
-            spawn_viewer: false,  // Use buffered mode by default to avoid requiring external viewer
+            spawn_viewer: false,  // Use memory recording by default
         }
     }
 }
@@ -30,16 +30,17 @@ pub struct VisualizationClient {
 }
 
 impl VisualizationClient {
-    /// Create new visualization client
+    /// Create a new visualization client
     pub fn new(config: VisualizationConfig) -> Result<Self> {
         let recording = if config.spawn_viewer {
-            RecordingStreamBuilder::new(config.application_id.clone())
+            RecordingStreamBuilder::new(config.application_id)
                 .spawn()
                 .map_err(|e| MiniRosError::Other(format!("Failed to spawn viewer: {}", e)))?
         } else {
-            RecordingStreamBuilder::new(config.application_id.clone())
-                .buffered()
-                .map_err(|e| MiniRosError::Other(format!("Failed to create recording stream: {}", e)))?
+            let (recording, _storage) = RecordingStreamBuilder::new(config.application_id)
+                .memory()
+                .map_err(|e| MiniRosError::Other(format!("Failed to create memory recording: {}", e)))?;
+            recording
         };
 
         Ok(Self {
@@ -47,8 +48,9 @@ impl VisualizationClient {
         })
     }
 
-    /// Log scalar value
+    /// Log scalar value using the correct rerun 0.20 API
     pub fn log_scalar(&self, entity_path: &str, value: f64) -> Result<()> {
+        // Use the Scalar archetype directly which is the simplest approach
         self.recording
             .log(entity_path, &rerun::Scalar::new(value))
             .map_err(|e| MiniRosError::Other(format!("Failed to log scalar: {}", e)))?;
@@ -57,48 +59,27 @@ impl VisualizationClient {
         Ok(())
     }
 
-    /// Log 2D points
-    pub fn log_points_2d(&self, entity_path: &str, points: Vec<[f32; 2]>) -> Result<()> {
-        self.recording
-            .log(entity_path, &rerun::Points2D::new(points))
-            .map_err(|e| MiniRosError::Other(format!("Failed to log 2D points: {}", e)))?;
-        
-        tracing::debug!("Logged 2D points to entity: {}", entity_path);
-        Ok(())
-    }
-
-    /// Log 3D points
-    pub fn log_points_3d(&self, entity_path: &str, points: Vec<[f32; 3]>) -> Result<()> {
+    /// Log point cloud
+    pub fn log_points(&self, entity_path: &str, points: Vec<[f32; 3]>) -> Result<()> {
+        let points_len = points.len();
         self.recording
             .log(entity_path, &rerun::Points3D::new(points))
-            .map_err(|e| MiniRosError::Other(format!("Failed to log 3D points: {}", e)))?;
+            .map_err(|e| MiniRosError::Other(format!("Failed to log points: {}", e)))?;
         
-        tracing::debug!("Logged 3D points to entity: {}", entity_path);
+        tracing::debug!("Logged {} points to entity: {}", points_len, entity_path);
         Ok(())
     }
 
-    /// Log text message
-    pub fn log_text(&self, entity_path: &str, text: &str) -> Result<()> {
-        self.recording
-            .log(entity_path, &rerun::TextLog::new(text))
-            .map_err(|e| MiniRosError::Other(format!("Failed to log text: {}", e)))?;
-        
-        tracing::debug!("Logged text to entity: {}", entity_path);
-        Ok(())
-    }
-
-    /// Log transform (position and rotation)
-    pub fn log_transform_3d(
+    /// Log transform 
+    pub fn log_transform(
         &self, 
         entity_path: &str, 
-        translation: [f32; 3], 
+        translation: [f32; 3],
         rotation_quat: [f32; 4]
     ) -> Result<()> {
-        use rerun::Transform3D;
-        
-        let transform = Transform3D::from_translation_rotation(
+        let transform = rerun::Transform3D::from_translation_rotation(
             translation,
-            rerun::Rotation3D::Quaternion(rerun::components::RotationQuat::from(rotation_quat))
+            rerun::Rotation3D::Quaternion(rotation_quat.into())
         );
 
         self.recording
@@ -109,94 +90,77 @@ impl VisualizationClient {
         Ok(())
     }
 
-    /// Get recording stream reference
-    pub fn recording(&self) -> Arc<RecordingStream> {
-        self.recording.clone()
+    /// Log image
+    pub fn log_image(&self, entity_path: &str, image_data: &[u8], width: u32, height: u32) -> Result<()> {
+        // Create a simple RGB image using the correct API
+        let image = rerun::Image::from_rgb24(image_data.to_vec(), [width, height]);
+
+        self.recording
+            .log(entity_path, &image)
+            .map_err(|e| MiniRosError::Other(format!("Failed to log image: {}", e)))?;
+        
+        tracing::debug!("Logged image {}x{} to entity: {}", width, height, entity_path);
+        Ok(())
     }
 
-    /// Flush any pending logs
-    pub fn flush(&self) -> Result<()> {
-        // Rerun handles flushing automatically in most cases
-        tracing::debug!("Visualization client flush requested");
+    /// Set recording time
+    pub fn set_time(&self, timeline: &str, nanos: i64) -> Result<()> {
+        self.recording.set_time_nanos(timeline, nanos);
+        Ok(())
+    }
+
+    /// Log text message
+    pub fn log_text(&self, entity_path: &str, message: &str) -> Result<()> {
+        self.recording
+            .log(entity_path, &rerun::TextLog::new(message))
+            .map_err(|e| MiniRosError::Other(format!("Failed to log text: {}", e)))?;
+        
+        tracing::debug!("Logged text to entity: {}", entity_path);
         Ok(())
     }
 }
 
-/// Helper trait for visualizable data types
-pub trait Visualizable {
-    /// Visualize data using Rerun client
-    fn visualize(&self, client: &VisualizationClient, entity_path: &str) -> Result<()>;
-}
-
-/// Robot pose visualization data
+/// A simple visualization data type
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RobotPose {
-    pub position: [f32; 3],
-    pub orientation: [f32; 4], // quaternion [x, y, z, w]
+pub struct VisualizationData {
+    pub entity_path: String,
+    pub timestamp: i64,
+    pub data_type: String,
+    pub metadata: std::collections::HashMap<String, String>,
 }
 
-impl Visualizable for RobotPose {
-    fn visualize(&self, client: &VisualizationClient, entity_path: &str) -> Result<()> {
-        client.log_transform_3d(entity_path, self.position, self.orientation)
-    }
-}
-
-/// Point cloud visualization data
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PointCloud {
-    pub points: Vec<[f32; 3]>,
-}
-
-impl Visualizable for PointCloud {
-    fn visualize(&self, client: &VisualizationClient, entity_path: &str) -> Result<()> {
-        client.log_points_3d(entity_path, self.points.clone())
-    }
-}
-
-/// Laser scan visualization data
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LaserScan {
-    pub ranges: Vec<f32>,
-    pub angle_min: f32,
-    pub angle_max: f32,
-}
-
-impl Visualizable for LaserScan {
-    fn visualize(&self, client: &VisualizationClient, entity_path: &str) -> Result<()> {
-        // Convert laser scan to 2D points
-        let mut points = Vec::new();
-        let angle_increment = (self.angle_max - self.angle_min) / (self.ranges.len() as f32 - 1.0);
-        
-        for (i, &range) in self.ranges.iter().enumerate() {
-            if range > 0.0 && range.is_finite() {
-                let angle = self.angle_min + (i as f32) * angle_increment;
-                let x = range * angle.cos();
-                let y = range * angle.sin();
-                points.push([x, y]);
-            }
+impl VisualizationData {
+    pub fn new(entity_path: String, data_type: String) -> Self {
+        Self {
+            entity_path,
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos() as i64,
+            data_type,
+            metadata: std::collections::HashMap::new(),
         }
-        
-        client.log_points_2d(entity_path, points)
     }
 }
+
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_visualization_config() {
+    fn test_visualization_config_default() {
         let config = VisualizationConfig::default();
         assert_eq!(config.application_id, "miniROS");
-        assert!(!config.spawn_viewer);  // Default is buffered mode
+        assert!(!config.spawn_viewer);
     }
 
     #[test]
-    fn test_robot_pose_creation() {
-        let pose = RobotPose {
-            position: [1.0, 2.0, 0.0],
-            orientation: [0.0, 0.0, 0.0, 1.0],
-        };
-        assert_eq!(pose.position, [1.0, 2.0, 0.0]);
+    fn test_visualization_data_creation() {
+        let data = VisualizationData::new("test/entity".to_string(), "scalar".to_string());
+        assert_eq!(data.entity_path, "test/entity");
+        assert_eq!(data.data_type, "scalar");
+        assert!(data.timestamp > 0);
     }
 } 

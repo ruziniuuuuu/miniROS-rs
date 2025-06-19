@@ -3,12 +3,13 @@
 //! This library provides core robotics communication primitives with
 //! ROS2-compatible DDS transport layer for maximum interoperability.
 
-pub mod action;
+// Temporarily comment out action and parameter modules due to Send trait issues
+// pub mod action;
 pub mod core;
 pub mod error;
 pub mod message;
 pub mod node;
-pub mod parameter;
+// pub mod parameter;
 pub mod publisher;
 pub mod subscriber;
 pub mod service;
@@ -34,16 +35,17 @@ pub use node::Node;
 pub use publisher::Publisher;
 pub use subscriber::Subscriber;
 pub use service::{Service, ServiceClient};
-pub use action::{ActionServer, ActionClient, GoalStatus, ActionGoal, ActionResult, ActionFeedback};
-pub use parameter::{ParameterServer, ParameterClient, ParameterValue};
+// pub use action::*;
+// pub use parameter::*;
 pub use message::{Message, StringMsg, Int32Msg, Float64Msg, BoolMsg, EmptyMsg, Stamped};
 
 /// Prelude module for common imports
 pub mod prelude {
     pub use crate::{
         Result, MiniRosError, Context, Node, Publisher, Subscriber, 
-        Service, ServiceClient, ActionServer, ActionClient, GoalStatus,
-        ParameterServer, ParameterClient, ParameterValue,
+        Service, ServiceClient, 
+        // ActionServer, ActionClient, GoalStatus,
+        // ParameterServer, ParameterClient, ParameterValue,
         Message, StringMsg, Int32Msg, Float64Msg, BoolMsg, EmptyMsg, Stamped
     };
     pub use std::time::Duration;

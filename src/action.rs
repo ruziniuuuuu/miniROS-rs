@@ -7,22 +7,18 @@
 //! 
 //! This combines service calls with topic-based feedback.
 
-use crate::core::Context;
-use crate::error::{Result, MiniRosError};
-use crate::message::Message;
-use crate::service::{Service, ServiceClient};
-use crate::publisher::Publisher;
-use crate::subscriber::Subscriber;
-
-use serde::{Deserialize, Serialize};
-use std::marker::PhantomData;
+use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::{mpsc, Mutex};
+use serde::{Serialize, Deserialize};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
+use crate::error::{Result, MiniRosError};
+use crate::message::{Message, StringMsg};
+use crate::{Node, Publisher, Subscriber};
+
 /// Action goal status enumeration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GoalStatus {
     /// Goal has been accepted and is awaiting execution
     Accepted,
@@ -36,285 +32,284 @@ pub enum GoalStatus {
     Aborted,
     /// Goal was rejected before execution
     Rejected,
+    /// Goal is pending
+    Pending,
+    /// Goal is active
+    Active,
+    /// Goal is preempting
+    Preempting,
+    /// Goal is canceled
+    Canceled,
 }
 
-/// Action goal request message
+/// Action goal information
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ActionGoal<G: Message> {
-    pub goal_id: Uuid,
-    pub goal: G,
-}
-
-/// Action result message
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ActionResult<R: Message> {
-    pub goal_id: Uuid,
+pub struct GoalInfo {
+    pub goal_id: String,
     pub status: GoalStatus,
-    pub result: Option<R>,
+    pub timestamp: u64,
 }
 
-/// Action feedback message
+/// Action goal wrapper - no longer generic to avoid Deserialize issues
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ActionFeedback<F: Message> {
-    pub goal_id: Uuid,
-    pub feedback: F,
+pub struct ActionGoal {
+    pub goal_id: String,
+    pub goal_data: Vec<u8>,  // Serialized goal data
+}
+
+/// Action result wrapper - no longer generic to avoid Deserialize issues
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionResult {
+    pub goal_id: String,
+    pub status: GoalStatus,
+    pub result_data: Option<Vec<u8>>,  // Serialized result data
+}
+
+/// Action feedback wrapper - no longer generic to avoid Deserialize issues
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionFeedback {
+    pub goal_id: String,
+    pub feedback_data: Vec<u8>,  // Serialized feedback data
 }
 
 /// Action server that processes long-running goals
-pub struct ActionServer<G: Message, R: Message, F: Message> {
-    name: String,
-    context: Context,
-    goal_service: Service<ActionGoal<G>, GoalStatus>,
-    cancel_service: Service<Uuid, bool>,
-    feedback_publisher: Publisher<ActionFeedback<F>>,
-    result_publisher: Publisher<ActionResult<R>>,
-    active_goals: Arc<Mutex<Vec<Uuid>>>,
-    _phantom: PhantomData<(G, R, F)>,
+pub struct ActionServer {
+    action_name: String,
+    goal_publisher: Publisher<StringMsg>,
+    result_publisher: Publisher<StringMsg>,
+    feedback_publisher: Publisher<StringMsg>,
+    status_publisher: Publisher<StringMsg>,
+    goal_subscriber: Subscriber<StringMsg>,
+    cancel_subscriber: Subscriber<StringMsg>,
+    goals: Arc<Mutex<HashMap<String, GoalInfo>>>,
 }
 
-impl<G: Message, R: Message, F: Message> ActionServer<G, R, F> {
+impl ActionServer {
     /// Create a new action server
-    pub async fn new<GoalCallback, CancelCallback>(
-        name: &str,
-        context: Context,
-        goal_callback: GoalCallback,
-        cancel_callback: CancelCallback,
-    ) -> Result<Self>
-    where
-        GoalCallback: Fn(ActionGoal<G>) -> Result<(R, Vec<F>)> + Send + Sync + 'static,
-        CancelCallback: Fn(Uuid) -> Result<bool> + Send + Sync + 'static,
-        G: 'static,
-        R: 'static,
-        F: 'static,
-    {
-        let active_goals = Arc::new(Mutex::new(Vec::new()));
-        let active_goals_clone = active_goals.clone();
+    pub async fn new(node: &mut Node, action_name: &str) -> Result<Self> {
+        // Create topics for action communication
+        let goal_topic = format!("/{}/goal", action_name);
+        let result_topic = format!("/{}/result", action_name);
+        let feedback_topic = format!("/{}/feedback", action_name);
+        let status_topic = format!("/{}/status", action_name);
+        let cancel_topic = format!("/{}/cancel", action_name);
 
-        // Create goal processing service
-        let goal_service = {
-            let goal_callback = Arc::new(goal_callback);
-            let context_clone = context.clone();
-            let name_clone = name.to_string();
-            let active_goals_ref = active_goals_clone.clone();
+        // Create publishers
+        let goal_publisher = node.create_publisher(&goal_topic).await?;
+        let result_publisher = node.create_publisher(&result_topic).await?;
+        let feedback_publisher = node.create_publisher(&feedback_topic).await?;
+        let status_publisher = node.create_publisher(&status_topic).await?;
 
-            // Create service endpoint
-            let mut node = crate::node::Node::with_context(&format!("{}_server", name), context_clone.clone())?;
-            node.init().await?;
-
-            node.create_service(
-                &format!("{}/goal", name),
-                move |goal_request: ActionGoal<G>| -> Result<GoalStatus> {
-                    let goal_id = goal_request.goal_id;
-                    tracing::info!("Action server '{}' received goal: {}", name_clone, goal_id);
-
-                    // Add to active goals
-                    let active_goals_task = active_goals_ref.clone();
-                    let goal_callback_task = goal_callback.clone();
-                    let context_task = context_clone.clone();
-                    let name_task = name_clone.clone();
-
-                    // Spawn goal execution task
-                    tokio::spawn(async move {
-                        {
-                            let mut goals = active_goals_task.lock().await;
-                            goals.push(goal_id);
-                        }
-
-                        // Execute goal
-                        match goal_callback_task(goal_request) {
-                            Ok((result, feedbacks)) => {
-                                // Send feedback messages
-                                for feedback in feedbacks {
-                                    // In a real implementation, we'd publish feedback
-                                    tracing::debug!("Action feedback for goal {}", goal_id);
-                                }
-
-                                // Send result
-                                let action_result = ActionResult {
-                                    goal_id,
-                                    status: GoalStatus::Succeeded,
-                                    result: Some(result),
-                                };
-                                tracing::info!("Action goal {} succeeded", goal_id);
-                            }
-                            Err(e) => {
-                                let action_result = ActionResult {
-                                    goal_id,
-                                    status: GoalStatus::Aborted,
-                                    result: None,
-                                };
-                                tracing::warn!("Action goal {} aborted: {}", goal_id, e);
-                            }
-                        }
-
-                        // Remove from active goals
-                        {
-                            let mut goals = active_goals_task.lock().await;
-                            goals.retain(|&id| id != goal_id);
-                        }
-                    });
-
-                    Ok(GoalStatus::Accepted)
-                }
-            ).await?
-        };
-
-        // Create cancellation service
-        let cancel_service = {
-            let active_goals_cancel = active_goals.clone();
-            let cancel_callback = Arc::new(cancel_callback);
-
-            let mut node = crate::node::Node::with_context(&format!("{}_cancel", name), context.clone())?;
-            node.init().await?;
-
-            node.create_service(
-                &format!("{}/cancel", name),
-                move |goal_id: Uuid| -> Result<bool> {
-                    tracing::info!("Cancel request for goal: {}", goal_id);
-                    
-                    // Check if goal is active
-                    let active_goals_check = active_goals_cancel.clone();
-                    let cancel_result = tokio::task::block_in_place(|| {
-                        tokio::runtime::Handle::current().block_on(async {
-                            let goals = active_goals_check.lock().await;
-                            goals.contains(&goal_id)
-                        })
-                    });
-
-                    if cancel_result {
-                        cancel_callback(goal_id)
-                    } else {
-                        Ok(false) // Goal not active
-                    }
-                }
-            ).await?
-        };
-
-        // Create feedback and result publishers
-        let mut feedback_node = crate::node::Node::with_context(&format!("{}_feedback", name), context.clone())?;
-        feedback_node.init().await?;
-        let feedback_publisher = feedback_node.create_publisher::<ActionFeedback<F>>(&format!("{}/feedback", name)).await?;
-
-        let mut result_node = crate::node::Node::with_context(&format!("{}_result", name), context.clone())?;
-        result_node.init().await?;
-        let result_publisher = result_node.create_publisher::<ActionResult<R>>(&format!("{}/result", name)).await?;
+        // Create subscribers
+        let goal_subscriber = node.create_subscriber(&goal_topic).await?;
+        let cancel_subscriber = node.create_subscriber(&cancel_topic).await?;
 
         Ok(ActionServer {
-            name: name.to_string(),
-            context,
-            goal_service,
-            cancel_service,
-            feedback_publisher,
+            action_name: action_name.to_string(),
+            goal_publisher,
             result_publisher,
-            active_goals,
-            _phantom: PhantomData,
+            feedback_publisher,
+            status_publisher,
+            goal_subscriber,
+            cancel_subscriber,
+            goals: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
     /// Get the action name
     pub fn name(&self) -> &str {
-        &self.name
+        &self.action_name
     }
 
-    /// Get count of active goals
-    pub async fn active_goal_count(&self) -> usize {
-        self.active_goals.lock().await.len()
+    /// Accept a goal and start processing
+    pub async fn accept_goal(&self, goal_id: &str) -> Result<()> {
+        let mut goals = self.goals.lock().await;
+        if let Some(goal_info) = goals.get_mut(goal_id) {
+            goal_info.status = GoalStatus::Active;
+            
+            // Publish status update
+            let status_msg = serde_json::to_string(goal_info)?;
+            let string_msg = StringMsg { data: status_msg };
+            self.status_publisher.publish(&string_msg).await?;
+        }
+        Ok(())
+    }
+
+    /// Publish feedback for a goal
+    pub async fn publish_feedback<F: Message>(&self, goal_id: &str, feedback: &F) -> Result<()> {
+        let feedback_data = serde_json::to_vec(feedback)?;
+        let action_feedback = ActionFeedback {
+            goal_id: goal_id.to_string(),
+            feedback_data,
+        };
+        
+        let feedback_msg = serde_json::to_string(&action_feedback)?;
+        let string_msg = StringMsg { data: feedback_msg };
+        self.feedback_publisher.publish(&string_msg).await
+    }
+
+    /// Complete a goal with success
+    pub async fn succeed_goal<R: Message>(&self, goal_id: &str, result: &R) -> Result<()> {
+        let result_data = serde_json::to_vec(result)?;
+        let action_result = ActionResult {
+            goal_id: goal_id.to_string(),
+            status: GoalStatus::Succeeded,
+            result_data: Some(result_data),
+        };
+        
+        let result_msg = serde_json::to_string(&action_result)?;
+        let string_msg = StringMsg { data: result_msg };
+        self.result_publisher.publish(&string_msg).await?;
+
+        // Update goal status
+        let mut goals = self.goals.lock().await;
+        if let Some(goal_info) = goals.get_mut(goal_id) {
+            goal_info.status = GoalStatus::Succeeded;
+        }
+        
+        Ok(())
+    }
+
+    /// Abort a goal
+    pub async fn abort_goal(&self, goal_id: &str, error_msg: &str) -> Result<()> {
+        let action_result = ActionResult {
+            goal_id: goal_id.to_string(),
+            status: GoalStatus::Aborted,
+            result_data: Some(error_msg.as_bytes().to_vec()),
+        };
+        
+        let result_msg = serde_json::to_string(&action_result)?;
+        let string_msg = StringMsg { data: result_msg };
+        self.result_publisher.publish(&string_msg).await?;
+
+        // Update goal status
+        let mut goals = self.goals.lock().await;
+        if let Some(goal_info) = goals.get_mut(goal_id) {
+            goal_info.status = GoalStatus::Aborted;
+        }
+        
+        Ok(())
+    }
+
+    /// Set callback for incoming goals
+    pub fn on_goal<F>(&self, callback: F) -> Result<()>
+    where
+        F: Fn(ActionGoal) + Send + Sync + 'static,
+    {
+        let goals = Arc::clone(&self.goals);
+        
+        self.goal_subscriber.on_message(move |msg: StringMsg| {
+            if let Ok(action_goal) = serde_json::from_str::<ActionGoal>(&msg.data) {
+                // Register new goal
+                let goal_info = GoalInfo {
+                    goal_id: action_goal.goal_id.clone(),
+                    status: GoalStatus::Pending,
+                    timestamp: std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs(),
+                };
+                
+                tokio::spawn({
+                    let goals = Arc::clone(&goals);
+                    let goal_id = action_goal.goal_id.clone();
+                    async move {
+                        let mut goals = goals.lock().await;
+                        goals.insert(goal_id, goal_info);
+                    }
+                });
+                
+                callback(action_goal);
+            }
+        })
     }
 }
 
 /// Action client for sending goals and receiving feedback
-pub struct ActionClient<G: Message, R: Message, F: Message> {
-    name: String,
-    context: Context,
-    goal_client: ServiceClient<ActionGoal<G>, GoalStatus>,
-    cancel_client: ServiceClient<Uuid, bool>,
-    feedback_subscriber: Subscriber<ActionFeedback<F>>,
-    result_subscriber: Subscriber<ActionResult<R>>,
-    _phantom: PhantomData<(G, R, F)>,
+pub struct ActionClient {
+    action_name: String,
+    goal_publisher: Publisher<StringMsg>,
+    cancel_publisher: Publisher<StringMsg>,
+    result_subscriber: Subscriber<StringMsg>,
+    feedback_subscriber: Subscriber<StringMsg>,
+    status_subscriber: Subscriber<StringMsg>,
 }
 
-impl<G: Message, R: Message, F: Message> ActionClient<G, R, F> {
+impl ActionClient {
     /// Create a new action client
-    pub async fn new(name: &str, context: Context) -> Result<Self>
-    where
-        G: 'static,
-        R: 'static,
-        F: 'static,
-    {
-        // Create service clients for goal and cancel
-        let mut goal_node = crate::node::Node::with_context(&format!("{}_goal_client", name), context.clone())?;
-        goal_node.init().await?;
-        let goal_client = goal_node.create_service_client::<ActionGoal<G>, GoalStatus>(&format!("{}/goal", name)).await?;
+    pub async fn new(node: &mut Node, action_name: &str) -> Result<Self> {
+        // Create topics for action communication
+        let goal_topic = format!("/{}/goal", action_name);
+        let result_topic = format!("/{}/result", action_name);
+        let feedback_topic = format!("/{}/feedback", action_name);
+        let status_topic = format!("/{}/status", action_name);
+        let cancel_topic = format!("/{}/cancel", action_name);
 
-        let mut cancel_node = crate::node::Node::with_context(&format!("{}_cancel_client", name), context.clone())?;
-        cancel_node.init().await?;
-        let cancel_client = cancel_node.create_service_client::<Uuid, bool>(&format!("{}/cancel", name)).await?;
+        // Create publishers
+        let goal_publisher = node.create_publisher(&goal_topic).await?;
+        let cancel_publisher = node.create_publisher(&cancel_topic).await?;
 
-        // Create subscribers for feedback and result
-        let mut feedback_node = crate::node::Node::with_context(&format!("{}_feedback_client", name), context.clone())?;
-        feedback_node.init().await?;
-        let feedback_subscriber = feedback_node.create_subscriber::<ActionFeedback<F>>(&format!("{}/feedback", name)).await?;
-
-        let mut result_node = crate::node::Node::with_context(&format!("{}_result_client", name), context.clone())?;
-        result_node.init().await?;
-        let result_subscriber = result_node.create_subscriber::<ActionResult<R>>(&format!("{}/result", name)).await?;
+        // Create subscribers
+        let result_subscriber = node.create_subscriber(&result_topic).await?;
+        let feedback_subscriber = node.create_subscriber(&feedback_topic).await?;
+        let status_subscriber = node.create_subscriber(&status_topic).await?;
 
         Ok(ActionClient {
-            name: name.to_string(),
-            context,
-            goal_client,
-            cancel_client,
-            feedback_subscriber,
+            action_name: action_name.to_string(),
+            goal_publisher,
+            cancel_publisher,
             result_subscriber,
-            _phantom: PhantomData,
+            feedback_subscriber,
+            status_subscriber,
         })
     }
 
     /// Send a goal to the action server
-    pub async fn send_goal(&self, goal: G) -> Result<Uuid> {
-        let goal_id = Uuid::new_v4();
-        let action_goal = ActionGoal { goal_id, goal };
-
-        let status = self.goal_client.call(action_goal).await?;
+    pub async fn send_goal<G: Message>(&self, goal: &G) -> Result<String> {
+        let goal_id = Uuid::new_v4().to_string();
+        let goal_data = serde_json::to_vec(goal)?;
         
-        match status {
-            GoalStatus::Accepted => {
-                tracing::info!("Action goal {} accepted", goal_id);
-                Ok(goal_id)
-            }
-            GoalStatus::Rejected => {
-                Err(MiniRosError::Other(format!("Action goal {} rejected", goal_id)))
-            }
-            _ => {
-                Err(MiniRosError::Other(format!("Unexpected goal status: {:?}", status)))
-            }
-        }
+        let action_goal = ActionGoal {
+            goal_id: goal_id.clone(),
+            goal_data,
+        };
+        
+        let goal_msg = serde_json::to_string(&action_goal)?;
+        let string_msg = StringMsg { data: goal_msg };
+        self.goal_publisher.publish(&string_msg).await?;
+        
+        Ok(goal_id)
     }
 
     /// Cancel a goal
-    pub async fn cancel_goal(&self, goal_id: Uuid) -> Result<bool> {
-        self.cancel_client.call(goal_id).await
+    pub async fn cancel_goal(&self, goal_id: &str) -> Result<()> {
+        let cancel_msg = format!("{{\"goal_id\": \"{}\"}}", goal_id);
+        let string_msg = StringMsg { data: cancel_msg };
+        self.cancel_publisher.publish(&string_msg).await
     }
 
-    /// Wait for action server to be available
-    pub async fn wait_for_server(&self, timeout: Duration) -> Result<()> {
-        self.goal_client.wait_for_service(timeout).await
-    }
-
-    /// Set feedback callback
-    pub async fn on_feedback<F2>(&self, callback: F2) -> Result<()>
+    /// Set callback for feedback messages
+    pub fn on_feedback<F>(&self, callback: F) -> Result<()>
     where
-        F2: Fn(ActionFeedback<F>) + Send + 'static,
+        F: Fn(ActionFeedback) + Send + Sync + 'static,
     {
-        self.feedback_subscriber.on_message(callback).await
+        self.feedback_subscriber.on_message(move |msg: StringMsg| {
+            if let Ok(feedback) = serde_json::from_str::<ActionFeedback>(&msg.data) {
+                callback(feedback);
+            }
+        })
     }
 
-    /// Set result callback
-    pub async fn on_result<R2>(&self, callback: R2) -> Result<()>
+    /// Set callback for result messages
+    pub fn on_result<F>(&self, callback: F) -> Result<()>
     where
-        R2: Fn(ActionResult<R>) + Send + 'static,
+        F: Fn(ActionResult) + Send + Sync + 'static,
     {
-        self.result_subscriber.on_message(callback).await
+        self.result_subscriber.on_message(move |msg: StringMsg| {
+            if let Ok(result) = serde_json::from_str::<ActionResult>(&msg.data) {
+                callback(result);
+            }
+        })
     }
 }
 
