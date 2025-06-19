@@ -2,6 +2,14 @@
 //! 
 //! This module provides Python API that mimics ROS2 rclpy syntax
 
+// PyO3 macro limitations in Rust 2024 edition:
+// - non_local_definitions: PyO3 macros generate impl blocks that appear non-local
+// - unsafe_op_in_unsafe_fn: PyO3 argument parsing uses unsafe functions in macros  
+// These are known limitations of PyO3 0.20 with Rust 2024 edition
+// Future PyO3 versions are expected to resolve these issues
+#![allow(non_local_definitions)]
+#![allow(unsafe_op_in_unsafe_fn)]
+
 use pyo3::prelude::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -74,14 +82,16 @@ impl Node {
 /// Python wrapper for Publisher
 #[pyclass]
 pub struct Publisher {
+    #[allow(dead_code)] // Field is reserved for future functionality
     topic: String,
+    #[allow(dead_code)] // Field is reserved for future functionality
     node_name: String,
 }
 
 #[pymethods]
 impl Publisher {
     #[new]
-    fn new(msg_type: String, topic: String) -> Self {
+    fn new(_msg_type: String, topic: String) -> Self {
         Publisher {
             topic,
             node_name: "python_node".to_string(),
@@ -125,15 +135,17 @@ impl Publisher {
 /// Python wrapper for Subscription
 #[pyclass]
 pub struct Subscription {
+    #[allow(dead_code)] // Field is reserved for future functionality
     topic: String,
     callback: Option<PyObject>,
+    #[allow(dead_code)] // Field is reserved for future functionality
     node_name: String,
 }
 
 #[pymethods]
 impl Subscription {
     #[new]
-    fn new(msg_type: String, topic: String) -> Self {
+    fn new(_msg_type: String, topic: String) -> Self {
         Subscription {
             topic,
             callback: None,
@@ -207,7 +219,8 @@ pub fn init_python_module(m: &PyModule) -> PyResult<()> {
     m.add_class::<Logger>()?;
     
     // Add message types as module attributes
-    m.add("String", m.py().get_type::<StringMessage>())?;
+    m.add("StringMessage", m.py().get_type::<StringMessage>())?;
+    m.add("String", m.py().get_type::<StringMessage>())?; // For backward compatibility
     
     // Add utility functions
     m.add_function(wrap_pyfunction!(init, m)?)?;

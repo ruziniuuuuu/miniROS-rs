@@ -48,7 +48,7 @@ def main():
     try:
         # Spin for a limited time
         for _ in range(10):
-            mini_ros.spin_once(node, timeout_ms=1000)
+            mini_ros.spin_once(node, timeout_sec=1.0)
     except KeyboardInterrupt:
         logger.info('Demo interrupted')
     

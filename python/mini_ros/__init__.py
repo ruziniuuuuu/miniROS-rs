@@ -13,6 +13,8 @@ except ImportError as e:
     print("Using pure Python stubs for testing.")
     _BINDINGS_AVAILABLE = False
 from typing import Callable, Any, Optional
+import threading
+import time
 
 __version__ = "0.1.1"
 __author__ = "Chenyu Cao"
@@ -20,6 +22,62 @@ __email__ = "ruziniuuuuu@gmail.com"
 
 # Global state
 _initialized = False
+
+# Message types for compatibility (defined early for MessageBus)
+class String:
+    """String message type for compatibility"""
+    def __init__(self, data: str = ""):
+        self.data = data
+
+class Float64:
+    """Float64 message type for compatibility"""  
+    def __init__(self, data: float = 0.0):
+        self.data = data
+
+class Int32:
+    """Int32 message type for compatibility"""
+    def __init__(self, data: int = 0):
+        self.data = data
+
+# Aliases for ROS2 compatibility
+StringMessage = String
+Float64Message = Float64
+Int32Message = Int32
+
+# Simple message bus for demonstration
+class MessageBus:
+    def __init__(self):
+        self.subscribers = {}  # topic -> list of (callback, msg_type)
+        self.lock = threading.Lock()
+    
+    def subscribe(self, topic: str, callback: Callable, msg_type: str):
+        with self.lock:
+            if topic not in self.subscribers:
+                self.subscribers[topic] = []
+            self.subscribers[topic].append((callback, msg_type))
+    
+    def publish(self, topic: str, data: Any, msg_type: str):
+        with self.lock:
+            if topic in self.subscribers:
+                for callback, sub_msg_type in self.subscribers[topic]:
+                    if sub_msg_type == msg_type:
+                        # Create message object and call callback
+                        if msg_type == 'String':
+                            msg = String(data if isinstance(data, str) else str(data))
+                        elif msg_type == 'Float64':
+                            msg = Float64(float(data))
+                        elif msg_type == 'Int32':
+                            msg = Int32(int(data))
+                        else:
+                            msg = String(str(data))
+                        
+                        try:
+                            callback(msg)
+                        except Exception as e:
+                            print(f"Error in subscriber callback: {e}")
+
+# Global message bus instance
+_message_bus = MessageBus()
 
 # Python stubs for when Rust bindings are not available
 if not _BINDINGS_AVAILABLE:
@@ -228,6 +286,10 @@ class Node:
         rust_subscription = _RustSubscription(type_name, topic)
         subscription = Subscription(rust_subscription, topic, type_name, callback)
         self._subscriptions.append(subscription)
+        
+        # Register with the message bus
+        _message_bus.subscribe(topic, callback, type_name)
+        
         return subscription
     
     def destroy_node(self):
@@ -257,8 +319,11 @@ class Publisher:
         else:
             data = msg
             
-        # Call Rust publisher directly
+        # Call Rust publisher directly (for logging)
         self._rust_publisher.publish(data)
+        
+        # Also publish to the message bus for subscriptions
+        _message_bus.publish(self._topic, data, self._msg_type)
     
     def get_subscription_count(self) -> int:
         """Get subscription count (returns 0 for compatibility)"""
@@ -303,28 +368,10 @@ def spin_once(node: Node, *, executor=None, timeout_sec=None, context=None):
     _rust_spin_once(node._rust_node, timeout_ms)
 
 
-# Message types for compatibility
-class String:
-    """String message type for compatibility"""
-    def __init__(self, data: str = ""):
-        self.data = data
-
-
-class Float64:
-    """Float64 message type for compatibility"""  
-    def __init__(self, data: float = 0.0):
-        self.data = data
-
-
-class Int32:
-    """Int32 message type for compatibility"""
-    def __init__(self, data: int = 0):
-        self.data = data
-
-
 # Export main API
 __all__ = [
     'init', 'shutdown', 'ok', 'spin', 'spin_once',
     'Node', 'Publisher', 'Subscription',
-    'String', 'Float64', 'Int32'
+    'String', 'Float64', 'Int32',
+    'StringMessage', 'Float64Message', 'Int32Message'
 ] 
