@@ -10,6 +10,67 @@ use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use tokio::sync::mpsc;
 
+/// Message broker for in-memory communication
+pub struct MessageBroker {
+    subscribers: Arc<DashMap<String, Vec<Sender<Vec<u8>>>>>,
+}
+
+impl Default for MessageBroker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MessageBroker {
+    pub fn new() -> Self {
+        MessageBroker {
+            subscribers: Arc::new(DashMap::new()),
+        }
+    }
+
+    /// Publish a message to all subscribers of a topic
+    pub fn publish(&self, topic: &str, data: Vec<u8>) -> Result<usize> {
+        if let Some(subscribers) = self.subscribers.get(topic) {
+            let mut sent_count = 0;
+            // Remove dead subscribers while sending
+            let mut active_subscribers = Vec::new();
+            
+            for sender in subscribers.iter() {
+                if sender.send(data.clone()).is_ok() {
+                    active_subscribers.push(sender.clone());
+                    sent_count += 1;
+                }
+            }
+            
+            // Update the subscriber list with only active ones
+            self.subscribers.insert(topic.to_string(), active_subscribers);
+            Ok(sent_count)
+        } else {
+            Ok(0)
+        }
+    }
+
+    /// Subscribe to a topic
+    pub fn subscribe(&self, topic: &str) -> Receiver<Vec<u8>> {
+        let (tx, rx) = unbounded();
+        
+        self.subscribers
+            .entry(topic.to_string())
+            .or_insert_with(Vec::new)
+            .push(tx);
+        
+        rx
+    }
+
+    /// Get subscriber count for a topic
+    pub fn subscriber_count(&self, topic: &str) -> usize {
+        self.subscribers
+            .get(topic)
+            .map(|subs| subs.len())
+            .unwrap_or(0)
+    }
+}
+
 /// Transport layer abstraction for different communication protocols
 #[async_trait::async_trait]
 pub trait Transport: Send + Sync {
@@ -203,10 +264,11 @@ impl Transport for TcpTransport {
     }
 }
 
-/// Transport manager that handles multiple transport protocols
+/// Transport manager that coordinates different transport types
 pub struct TransportManager {
     udp_transport: UdpTransport,
     tcp_transport: TcpTransport,
+    message_broker: Arc<MessageBroker>,
 }
 
 impl TransportManager {
@@ -214,56 +276,60 @@ impl TransportManager {
         Ok(TransportManager {
             udp_transport: UdpTransport::new(),
             tcp_transport: TcpTransport::new(),
+            message_broker: Arc::new(MessageBroker::new()),
         })
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        tracing::debug!("Starting transport manager");
+        tracing::debug!("Transport manager started");
         Ok(())
     }
 
     pub async fn stop(&mut self) -> Result<()> {
-        tracing::debug!("Stopping transport manager");
         self.udp_transport.stop().await?;
         self.tcp_transport.stop().await?;
+        tracing::debug!("Transport manager stopped");
         Ok(())
     }
 
-    /// Get UDP transport instance
+    /// Get access to the message broker for in-memory communication
+    pub fn broker(&self) -> &Arc<MessageBroker> {
+        &self.message_broker
+    }
+
     pub fn udp(&self) -> &UdpTransport {
         &self.udp_transport
     }
 
-    /// Get TCP transport instance
     pub fn tcp(&self) -> &TcpTransport {
         &self.tcp_transport
     }
 
-    /// Send message using the appropriate transport based on endpoint protocol
+    /// Send data using the appropriate transport
     pub async fn send(&self, endpoint: &str, data: &[u8]) -> Result<()> {
-        if endpoint.starts_with("udp://") {
-            let addr = endpoint.strip_prefix("udp://").unwrap();
-            self.udp_transport.send(addr, data).await
-        } else if endpoint.starts_with("tcp://") {
-            let addr = endpoint.strip_prefix("tcp://").unwrap();
-            self.tcp_transport.send(addr, data).await
-        } else {
-            // Default to UDP for backward compatibility
+        if endpoint.starts_with("tcp://") {
+            let endpoint = endpoint.strip_prefix("tcp://").unwrap();
+            self.tcp_transport.send(endpoint, data).await
+        } else if endpoint.starts_with("udp://") {
+            let endpoint = endpoint.strip_prefix("udp://").unwrap();
             self.udp_transport.send(endpoint, data).await
+        } else {
+            // Default to TCP
+            self.tcp_transport.send(endpoint, data).await
         }
     }
 
-    /// Listen on endpoint using the appropriate transport
+    /// Listen on an endpoint using the appropriate transport
     pub async fn listen(&self, endpoint: &str) -> Result<Receiver<Vec<u8>>> {
-        if endpoint.starts_with("udp://") {
-            let addr = endpoint.strip_prefix("udp://").unwrap();
-            self.udp_transport.listen(addr).await
-        } else if endpoint.starts_with("tcp://") {
-            let addr = endpoint.strip_prefix("tcp://").unwrap();
-            self.tcp_transport.listen(addr).await
-        } else {
-            // Default to UDP
+        if endpoint.starts_with("tcp://") {
+            let endpoint = endpoint.strip_prefix("tcp://").unwrap();
+            self.tcp_transport.listen(endpoint).await
+        } else if endpoint.starts_with("udp://") {
+            let endpoint = endpoint.strip_prefix("udp://").unwrap();
             self.udp_transport.listen(endpoint).await
+        } else {
+            // Default to TCP
+            self.tcp_transport.listen(endpoint).await
         }
     }
 }

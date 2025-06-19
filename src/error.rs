@@ -2,30 +2,28 @@
 
 use std::fmt;
 
-/// Result type alias for MiniROS operations
+/// Result type for MiniROS operations
 pub type Result<T> = std::result::Result<T, MiniRosError>;
 
-/// MiniROS error types
+/// Error types for MiniROS operations
 #[derive(Debug)]
 pub enum MiniRosError {
     /// Network communication error
     NetworkError(String),
     /// Serialization/deserialization error
     SerializationError(String),
-    /// Node not found error
-    NodeNotFound(String),
-    /// Topic not found error
-    TopicNotFound(String),
     /// Service not found error
     ServiceNotFound(String),
-    /// Timeout error
+    /// Service operation timeout
+    ServiceTimeout(String),
+    /// Generic timeout error
     Timeout(String),
-    /// General I/O error
-    IoError(std::io::Error),
     /// Configuration error
     ConfigError(String),
-    /// Other generic error
-    Other(String),
+    /// IO error
+    IoError(std::io::Error),
+    /// Custom error
+    Custom(String),
 }
 
 impl fmt::Display for MiniRosError {
@@ -33,13 +31,12 @@ impl fmt::Display for MiniRosError {
         match self {
             MiniRosError::NetworkError(msg) => write!(f, "Network error: {}", msg),
             MiniRosError::SerializationError(msg) => write!(f, "Serialization error: {}", msg),
-            MiniRosError::NodeNotFound(name) => write!(f, "Node not found: {}", name),
-            MiniRosError::TopicNotFound(topic) => write!(f, "Topic not found: {}", topic),
             MiniRosError::ServiceNotFound(service) => write!(f, "Service not found: {}", service),
+            MiniRosError::ServiceTimeout(service) => write!(f, "Service timeout: {}", service),
             MiniRosError::Timeout(msg) => write!(f, "Timeout: {}", msg),
-            MiniRosError::IoError(err) => write!(f, "IO error: {}", err),
             MiniRosError::ConfigError(msg) => write!(f, "Configuration error: {}", msg),
-            MiniRosError::Other(msg) => write!(f, "Other error: {}", msg),
+            MiniRosError::IoError(err) => write!(f, "IO error: {}", err),
+            MiniRosError::Custom(msg) => write!(f, "Error: {}", msg),
         }
     }
 }
@@ -61,5 +58,17 @@ impl From<serde_json::Error> for MiniRosError {
 impl From<bincode::Error> for MiniRosError {
     fn from(err: bincode::Error) -> Self {
         MiniRosError::SerializationError(err.to_string())
+    }
+}
+
+impl From<String> for MiniRosError {
+    fn from(msg: String) -> Self {
+        MiniRosError::Custom(msg)
+    }
+}
+
+impl From<&str> for MiniRosError {
+    fn from(msg: &str) -> Self {
+        MiniRosError::Custom(msg.to_string())
     }
 }

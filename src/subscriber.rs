@@ -1,188 +1,136 @@
 //! Subscriber implementation for MiniROS
 
 use crate::core::Context;
-use crate::error::Result;
+use crate::error::{MiniRosError, Result};
 use crate::message::Message;
-use crossbeam_channel::{Receiver, unbounded};
+
+use crossbeam_channel::Receiver;
 use std::marker::PhantomData;
 use std::sync::Arc;
-use tokio::sync::mpsc;
+use parking_lot::Mutex;
 
 /// Subscriber for receiving messages from a topic
 ///
-/// Subscribers receive messages published to topics they are interested in.
-/// Messages are received asynchronously and can be processed via callbacks or polling.
+/// Subscribers receive messages published to their topic of interest.
+/// They can register callbacks to handle incoming messages.
 pub struct Subscriber<T: Message> {
     topic: String,
-    endpoint: String,
-    #[allow(dead_code)]
     context: Context,
-    receiver: Receiver<T>,
-    _stop_sender: mpsc::UnboundedSender<()>,
+    message_receiver: Option<Receiver<Vec<u8>>>,
+    callback: Arc<Mutex<Option<Box<dyn Fn(T) + Send + Sync + 'static>>>>,
     _phantom: PhantomData<T>,
 }
 
 impl<T: Message> Subscriber<T> {
     /// Create a new subscriber for the given topic
-    #[allow(clippy::await_holding_lock)]
-    pub(crate) async fn new(topic: &str, endpoint: &str, context: Context) -> Result<Self> {
-        tracing::debug!(
-            "Creating subscriber for topic: {} on endpoint: {}",
-            topic,
-            endpoint
-        );
+    pub(crate) async fn new(topic: &str, context: Context) -> Result<Self> {
+        tracing::debug!("Creating subscriber for topic: {}", topic);
 
-        // Set up message receiver channel
-        let (msg_sender, msg_receiver) = unbounded();
-        let (stop_sender, mut stop_receiver) = mpsc::unbounded_channel();
-
-        // Start listening on the transport
-        let transport_receiver = {
-            let transport = context.inner.transport.clone();
-            let transport_guard = transport.read();
-            transport_guard.listen(endpoint).await?
+        // Subscribe to the message broker for local communication
+        let message_receiver = {
+            let transport = context.inner.transport.read();
+            Some(transport.broker().subscribe(topic))
         };
 
-        // Spawn background task to process incoming messages
-        let topic_clone = topic.to_string();
-        tokio::spawn(async move {
-            loop {
-                tokio::select! {
-                    // Receive raw data from transport
-                    raw_data_result = async {
-                        transport_receiver.recv()
-                    } => {
-                        if let Ok(data) = raw_data_result {
-                            // Deserialize the message
-                            match bincode::deserialize::<T>(&data) {
-                                Ok(message) => {
-                                    tracing::debug!("Received message on topic: {}", topic_clone);
-                                    if msg_sender.send(message).is_err() {
-                                        tracing::debug!("Message receiver dropped for topic: {}", topic_clone);
-                                        break;
-                                    }
-                                }
-                                Err(e) => {
-                                    tracing::warn!("Failed to deserialize message on topic {}: {}", topic_clone, e);
-                                }
-                            }
-                        } else {
-                            // Transport closed
-                            break;
-                        }
-                    }
-                    // Stop signal
-                    _ = stop_receiver.recv() => {
-                        tracing::debug!("Stopping subscriber for topic: {}", topic_clone);
-                        break;
-                    }
-                }
-            }
-        });
-
-        Ok(Subscriber {
+        let subscriber = Subscriber {
             topic: topic.to_string(),
-            endpoint: endpoint.to_string(),
             context,
-            receiver: msg_receiver,
-            _stop_sender: stop_sender,
+            message_receiver,
+            callback: Arc::new(Mutex::new(None)),
             _phantom: PhantomData,
-        })
+        };
+
+        // Start message processing task
+        subscriber.start_message_processing();
+
+        Ok(subscriber)
     }
 
-    /// Receive the next message (blocking)
-    ///
-    /// Returns `None` if the subscriber is closed or no more messages are available.
-    pub fn recv(&self) -> Option<T> {
-        self.receiver.recv().ok()
+    /// Set a callback function to handle incoming messages
+    pub fn on_message<F>(&self, callback: F) -> Result<()>
+    where
+        F: Fn(T) + Send + Sync + 'static,
+    {
+        tracing::debug!("Setting message callback for topic: {}", self.topic);
+        *self.callback.lock() = Some(Box::new(callback));
+        Ok(())
     }
 
     /// Try to receive a message without blocking
-    ///
-    /// Returns `None` if no message is currently available.
-    pub fn try_recv(&self) -> Option<T> {
-        self.receiver.try_recv().ok()
-    }
-
-    /// Get an iterator over messages
-    ///
-    /// This iterator will block on each call to `next()` until a message is available.
-    pub fn iter(&self) -> impl Iterator<Item = T> + '_ {
-        self.receiver.iter()
-    }
-
-    /// Set up a callback function to process messages asynchronously
-    ///
-    /// The callback will be called for each received message.
-    /// This method spawns a background task and returns immediately.
-    pub fn on_message<F>(&self, mut callback: F) -> Result<()>
-    where
-        F: FnMut(T) + Send + 'static,
-    {
-        let receiver = self.receiver.clone();
-        let topic = self.topic.clone();
-
-        tokio::spawn(async move {
-            for message in receiver.iter() {
-                tracing::debug!("Processing message callback for topic: {}", topic);
-                callback(message);
+    pub fn try_recv(&self) -> Result<Option<T>> {
+        if let Some(ref receiver) = self.message_receiver {
+            match receiver.try_recv() {
+                Ok(data) => {
+                    let message: T = bincode::deserialize(&data)
+                        .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
+                    Ok(Some(message))
+                }
+                Err(crossbeam_channel::TryRecvError::Empty) => Ok(None),
+                Err(crossbeam_channel::TryRecvError::Disconnected) => {
+                    Err(MiniRosError::NetworkError("Receiver disconnected".to_string()))
+                }
             }
-        });
-
-        Ok(())
+        } else {
+            Ok(None)
+        }
     }
 
-    /// Set up an async callback function to process messages
-    ///
-    /// Similar to `on_message` but for async callbacks.
-    pub fn on_message_async<F, Fut>(&self, callback: F) -> Result<()>
-    where
-        F: Fn(T) -> Fut + Send + Sync + 'static,
-        Fut: std::future::Future<Output = ()> + Send + 'static,
-        T: 'static,
-    {
-        let receiver = self.receiver.clone();
-        let topic = self.topic.clone();
-        let callback = Arc::new(callback);
+    /// Start the background message processing task
+    fn start_message_processing(&self) {
+        if let Some(ref receiver) = self.message_receiver {
+            let receiver = receiver.clone();
+            let callback = self.callback.clone();
+            let topic = self.topic.clone();
 
-        tokio::spawn(async move {
-            for message in receiver.iter() {
-                tracing::debug!("Processing async message callback for topic: {}", topic);
-                let callback_clone = callback.clone();
-                tokio::spawn(async move {
-                    callback_clone(message).await;
-                });
-            }
-        });
-
-        Ok(())
+            tokio::spawn(async move {
+                while let Ok(data) = receiver.recv() {
+                    // Deserialize the message
+                    match bincode::deserialize::<T>(&data) {
+                        Ok(message) => {
+                            // Call the callback if set
+                            if let Some(ref callback_fn) = *callback.lock() {
+                                callback_fn(message);
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                "Failed to deserialize message for topic {}: {}",
+                                topic,
+                                e
+                            );
+                        }
+                    }
+                }
+            });
+        }
     }
 
     /// Get the topic name
     pub fn topic(&self) -> &str {
         &self.topic
     }
-
-    /// Get the subscriber endpoint
-    pub fn endpoint(&self) -> &str {
-        &self.endpoint
-    }
-
-    /// Check if there are any messages waiting
-    pub fn has_messages(&self) -> bool {
-        !self.receiver.is_empty()
-    }
-
-    /// Get the number of messages currently in the queue
-    pub fn message_count(&self) -> usize {
-        self.receiver.len()
-    }
 }
 
-impl<T: Message> Drop for Subscriber<T> {
-    fn drop(&mut self) {
-        // Send stop signal when subscriber is dropped
-        let _ = self._stop_sender.send(());
+impl<T: Message> Clone for Subscriber<T> {
+    fn clone(&self) -> Self {
+        // Create a new subscriber with the same configuration
+        let new_receiver = {
+            let transport = self.context.inner.transport.read();
+            Some(transport.broker().subscribe(&self.topic))
+        };
+
+        let subscriber = Subscriber {
+            topic: self.topic.clone(),
+            context: self.context.clone(),
+            message_receiver: new_receiver,
+            callback: Arc::new(Mutex::new(None)),
+            _phantom: PhantomData,
+        };
+
+        // Start message processing for the cloned subscriber
+        subscriber.start_message_processing();
+        
+        subscriber
     }
 }
 
@@ -191,62 +139,86 @@ mod tests {
     use super::*;
     use crate::core::Context;
     use crate::message::StringMsg;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::time::Duration;
+    use tokio::time::sleep;
 
     #[tokio::test]
     async fn test_subscriber_creation() {
         let context = Context::with_domain_id(30).unwrap();
         context.init().await.unwrap();
 
-        let subscriber = Subscriber::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone())
+        let subscriber = Subscriber::<StringMsg>::new("test_topic", context.clone())
             .await
             .unwrap();
 
         assert_eq!(subscriber.topic(), "test_topic");
-        assert!(!subscriber.has_messages());
 
-        drop(subscriber);
-        context.shutdown().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_subscriber_try_recv() {
-        let context = Context::with_domain_id(31).unwrap();
-        context.init().await.unwrap();
-
-        let subscriber = Subscriber::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone())
-            .await
-            .unwrap();
-
-        // Should return None when no messages
-        assert!(subscriber.try_recv().is_none());
-
-        drop(subscriber);
         context.shutdown().await.unwrap();
     }
 
     #[tokio::test]
     async fn test_subscriber_callback() {
-        let context = Context::with_domain_id(32).unwrap();
+        let context = Context::with_domain_id(31).unwrap();
         context.init().await.unwrap();
 
-        let subscriber = Subscriber::<StringMsg>::new("test_topic", "127.0.0.1:0", context.clone())
+        let subscriber = Subscriber::<StringMsg>::new("test_topic", context.clone())
             .await
             .unwrap();
 
-        let received_messages = Arc::new(std::sync::Mutex::new(Vec::new()));
-        let received_clone = received_messages.clone();
+        let received = Arc::new(AtomicBool::new(false));
+        let received_clone = received.clone();
 
         subscriber
-            .on_message(move |msg: StringMsg| {
-                received_clone.lock().unwrap().push(msg.data);
+            .on_message(move |_msg: StringMsg| {
+                received_clone.store(true, Ordering::Relaxed);
             })
             .unwrap();
 
-        // Test passes if callback setup doesn't panic
-        // No actual messages expected in this unit test
+        // Simulate receiving a message by publishing to the broker
+        {
+            let transport = context.inner.transport.read();
+            let message = StringMsg {
+                data: "test".to_string(),
+            };
+            let data = bincode::serialize(&message).unwrap();
+            transport.broker().publish("test_topic", data).unwrap();
+        }
 
-        // Immediately drop subscriber to stop background tasks
-        drop(subscriber);
+        // Wait a bit for the message to be processed
+        sleep(Duration::from_millis(10)).await;
+
+        assert!(received.load(Ordering::Relaxed));
+
+        context.shutdown().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_subscriber_try_recv() {
+        let context = Context::with_domain_id(32).unwrap();
+        context.init().await.unwrap();
+
+        let subscriber = Subscriber::<StringMsg>::new("test_topic", context.clone())
+            .await
+            .unwrap();
+
+        // Should return None when no messages are available
+        assert!(subscriber.try_recv().unwrap().is_none());
+
+        // Publish a message to the broker
+        {
+            let transport = context.inner.transport.read();
+            let message = StringMsg {
+                data: "test message".to_string(),
+            };
+            let data = bincode::serialize(&message).unwrap();
+            transport.broker().publish("test_topic", data).unwrap();
+        }
+
+        // Should receive the message
+        let received = subscriber.try_recv().unwrap();
+        assert!(received.is_some());
+        assert_eq!(received.unwrap().data, "test message");
 
         context.shutdown().await.unwrap();
     }

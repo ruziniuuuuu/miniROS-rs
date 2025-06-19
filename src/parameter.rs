@@ -68,7 +68,7 @@ impl ParameterServer {
         let mut params = self
             .parameters
             .write()
-            .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
+            .map_err(|_| MiniRosError::Custom("Failed to acquire parameter lock".to_string()))?;
 
         params.insert(name.to_string(), value);
         tracing::debug!("Set parameter: {} = {:?}", name, params.get(name));
@@ -80,7 +80,7 @@ impl ParameterServer {
         let params = self
             .parameters
             .read()
-            .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
+            .map_err(|_| MiniRosError::Custom("Failed to acquire parameter lock".to_string()))?;
 
         Ok(params.get(name).cloned())
     }
@@ -90,7 +90,7 @@ impl ParameterServer {
         let params = self
             .parameters
             .read()
-            .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
+            .map_err(|_| MiniRosError::Custom("Failed to acquire parameter lock".to_string()))?;
 
         Ok(params.keys().cloned().collect())
     }
@@ -100,7 +100,7 @@ impl ParameterServer {
         let params = self
             .parameters
             .read()
-            .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
+            .map_err(|_| MiniRosError::Custom("Failed to acquire parameter lock".to_string()))?;
 
         Ok(params.contains_key(name))
     }
@@ -110,7 +110,7 @@ impl ParameterServer {
         let mut params = self
             .parameters
             .write()
-            .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
+            .map_err(|_| MiniRosError::Custom("Failed to acquire parameter lock".to_string()))?;
 
         Ok(params.remove(name).is_some())
     }
@@ -120,7 +120,7 @@ impl ParameterServer {
         let params = self
             .parameters
             .read()
-            .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
+            .map_err(|_| MiniRosError::Custom("Failed to acquire parameter lock".to_string()))?;
 
         Ok(params.clone())
     }
@@ -158,7 +158,7 @@ impl ParameterClient {
         let params = self
             .parameters
             .read()
-            .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
+            .map_err(|_| MiniRosError::Custom("Failed to acquire parameter lock".to_string()))?;
 
         Ok(params.get(name).cloned())
     }
@@ -168,7 +168,7 @@ impl ParameterClient {
         let params = self
             .parameters
             .read()
-            .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
+            .map_err(|_| MiniRosError::Custom("Failed to acquire parameter lock".to_string()))?;
 
         Ok(params.clone())
     }
@@ -178,7 +178,7 @@ impl ParameterClient {
         let params = self
             .parameters
             .read()
-            .map_err(|_| MiniRosError::Other("Failed to acquire parameter lock".to_string()))?;
+            .map_err(|_| MiniRosError::Custom("Failed to acquire parameter lock".to_string()))?;
 
         Ok(params.contains_key(name))
     }

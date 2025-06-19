@@ -35,12 +35,12 @@ impl VisualizationClient {
         let recording = if config.spawn_viewer {
             RecordingStreamBuilder::new(config.application_id)
                 .spawn()
-                .map_err(|e| MiniRosError::Other(format!("Failed to spawn viewer: {}", e)))?
+                .map_err(|e| MiniRosError::Custom(format!("Failed to spawn viewer: {}", e)))?
         } else {
             let (recording, _storage) = RecordingStreamBuilder::new(config.application_id)
                 .memory()
                 .map_err(|e| {
-                    MiniRosError::Other(format!("Failed to create memory recording: {}", e))
+                    MiniRosError::Custom(format!("Failed to create memory recording: {}", e))
                 })?;
             recording
         };
@@ -55,7 +55,7 @@ impl VisualizationClient {
         // Use the Scalar archetype directly which is the simplest approach
         self.recording
             .log(entity_path, &rerun::Scalar::new(value))
-            .map_err(|e| MiniRosError::Other(format!("Failed to log scalar: {}", e)))?;
+            .map_err(|e| MiniRosError::Custom(format!("Failed to log scalar: {}", e)))?;
 
         tracing::debug!("Logged scalar {} to entity: {}", value, entity_path);
         Ok(())
@@ -66,7 +66,7 @@ impl VisualizationClient {
         let points_len = points.len();
         self.recording
             .log(entity_path, &rerun::Points3D::new(points))
-            .map_err(|e| MiniRosError::Other(format!("Failed to log points: {}", e)))?;
+            .map_err(|e| MiniRosError::Custom(format!("Failed to log points: {}", e)))?;
 
         tracing::debug!("Logged {} points to entity: {}", points_len, entity_path);
         Ok(())
@@ -86,7 +86,7 @@ impl VisualizationClient {
 
         self.recording
             .log(entity_path, &transform)
-            .map_err(|e| MiniRosError::Other(format!("Failed to log transform: {}", e)))?;
+            .map_err(|e| MiniRosError::Custom(format!("Failed to log transform: {}", e)))?;
 
         tracing::debug!("Logged transform to entity: {}", entity_path);
         Ok(())
@@ -105,7 +105,7 @@ impl VisualizationClient {
 
         self.recording
             .log(entity_path, &image)
-            .map_err(|e| MiniRosError::Other(format!("Failed to log image: {}", e)))?;
+            .map_err(|e| MiniRosError::Custom(format!("Failed to log image: {}", e)))?;
 
         tracing::debug!(
             "Logged image {}x{} to entity: {}",
@@ -126,7 +126,7 @@ impl VisualizationClient {
     pub fn log_text(&self, entity_path: &str, message: &str) -> Result<()> {
         self.recording
             .log(entity_path, &rerun::TextLog::new(message))
-            .map_err(|e| MiniRosError::Other(format!("Failed to log text: {}", e)))?;
+            .map_err(|e| MiniRosError::Custom(format!("Failed to log text: {}", e)))?;
 
         tracing::debug!("Logged text to entity: {}", entity_path);
         Ok(())

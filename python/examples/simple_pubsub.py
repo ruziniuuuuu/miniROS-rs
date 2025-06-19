@@ -1,63 +1,43 @@
 #!/usr/bin/env python3
 """
-Simple Pub/Sub Example - miniROS Python API
+Simple Pub/Sub Demo for miniROS-rs
 
-This example demonstrates both publisher and subscriber in one node.
+This single-file example demonstrates both publishing and subscribing
+in the most minimal way possible - under 30 lines of code!
+Perfect example of the "mini" philosophy.
 """
 
 import mini_ros
 import time
 import threading
 
-
-def callback(msg):
-    """Subscriber callback"""
-    print(f'Subscriber received: "{msg.data}"')
-
-
 def main():
     # Initialize miniROS
     mini_ros.init()
     
     # Create node
-    node = mini_ros.Node('pubsub_demo')
-    logger = node.get_logger()
+    node = mini_ros.Node('simple_demo')
     
-    # Create publisher and subscriber
-    publisher = node.create_publisher(mini_ros.StringMessage, 'demo_topic', 10)
-    subscription = node.create_subscription(mini_ros.StringMessage, 'demo_topic', callback, 10)
+    # Create publisher and subscriber for same topic
+    pub = node.create_publisher(mini_ros.StringMessage, 'hello', 10)
     
-    logger.info('Pub/Sub demo started')
+    def on_message(msg):
+        print(f'📨 Received: {msg.data}')
     
-    # Publishing in a separate thread to allow spinning
-    def publish_messages():
-        count = 0
-        while count < 5:
-            msg = mini_ros.StringMessage()
-            msg.data = f'Message {count}'
-            publisher.publish(msg)
-            print(f'Publisher sent: "{msg.data}"')
-            count += 1
-            time.sleep(2)
+    sub = node.create_subscription(mini_ros.StringMessage, 'hello', on_message, 10)
     
-    # Start publishing thread
-    pub_thread = threading.Thread(target=publish_messages)
-    pub_thread.daemon = True
-    pub_thread.start()
+    print('🚀 Starting miniROS pub/sub demo...')
     
-    try:
-        # Spin for a limited time
-        for _ in range(10):
-            mini_ros.spin_once(node, timeout_sec=1.0)
-    except KeyboardInterrupt:
-        logger.info('Demo interrupted')
+    # Publish some messages
+    for i in range(3):
+        msg = mini_ros.StringMessage()
+        msg.data = f'Hello miniROS #{i+1}'
+        pub.publish(msg)
+        print(f'📤 Published: {msg.data}')
+        time.sleep(0.5)
     
-    logger.info('Pub/Sub demo completed')
-    
-    # Cleanup
-    node.destroy_node()
+    print('✅ Demo completed!')
     mini_ros.shutdown()
-
 
 if __name__ == '__main__':
     main() 
