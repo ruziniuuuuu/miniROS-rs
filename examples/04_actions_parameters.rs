@@ -1,250 +1,226 @@
-//! Example 04: Actions and Parameters
+//! Example 04: Parameters System
 //! 
-//! This example demonstrates:
-//! - Action servers and clients (long-running tasks)
-//! - Parameter server and client (configuration)
-//! - Domain ID isolation for multi-robot systems
+//! This example demonstrates the Parameter system in miniROS.
+//! Parameters manage runtime configuration for nodes and services.
 //! 
 //! Run with: cargo run --example 04_actions_parameters
 
 use mini_ros::{
     prelude::*,
-    message::{StringMsg, Int32Msg},
-    action::{ActionGoal, ActionFeedback},
-    parameter::ParameterValue,
+    parameter::{ParameterServer, ParameterClient, ParameterValue},
 };
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::info;
-use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     
-    info!("=== miniROS Example 04: Actions & Parameters ===");
+    info!("=== miniROS-rs Example 04: Parameter System ===");
 
-    // Test domain isolation - use domain 42 for robot system isolation
-    let domain_id = 42;
-    let context = Context::with_domain_id(domain_id)?;
+    // Initialize context
+    let context = Context::new()?;
     context.init().await?;
-    
-    info!("🌐 Using domain ID: {} (isolated from other robots)", domain_id);
 
     // === Parameter System Demo ===
-    info!("\n📋 Setting up Parameter Server...");
+    info!("📋 Setting up Parameter System...");
     
-    let parameter_server = ParameterServer::new(context.clone()).await?;
+    let param_server = ParameterServer::new();
     
-    // Declare robot configuration parameters
-    parameter_server.declare_parameter(
-        "robot.name",
-        ParameterValue::String("miniROS_Robot_42".to_string()),
-        "Robot identification name",
-        true, // read-only
-    ).await?;
+    // Set robot configuration parameters
+    param_server.set_parameter("robot.name", ParameterValue::String("miniROS_Robot".to_string()))?;
+    param_server.set_parameter("robot.max_speed", ParameterValue::Float(2.5))?;
+    param_server.set_parameter("robot.active", ParameterValue::Bool(true))?;
+    param_server.set_parameter("robot.sensors.enabled", ParameterValue::BoolArray(vec![true, true, false]))?;
+    param_server.set_parameter("robot.waypoints", ParameterValue::StringArray(vec![
+        "kitchen".to_string(),
+        "living_room".to_string(),
+        "bedroom".to_string(),
+    ]))?;
     
-    parameter_server.declare_parameter(
-        "robot.max_speed",
-        ParameterValue::Float(2.5),
-        "Maximum robot speed in m/s",
-        false,
-    ).await?;
+    let param_client = ParameterClient::from_server(&param_server);
     
-    parameter_server.declare_parameter(
-        "debug.verbose",
-        ParameterValue::Bool(true),
-        "Enable verbose debug output",
-        false,
-    ).await?;
+    info!("✅ Parameter system initialized");
 
-    // Create parameter client to read configuration
-    let param_client = ParameterClient::new(context.clone()).await?;
+    // === Read Parameters ===
+    info!("\n🔍 Reading Configuration Parameters:");
     
-    // Wait for parameter server to be ready
+    if let Some(name) = param_client.get_parameter("robot.name")? {
+        if let ParameterValue::String(robot_name) = name {
+            info!("🤖 Robot Name: {}", robot_name);
+        }
+    }
+    
+    if let Some(speed) = param_client.get_parameter("robot.max_speed")? {
+        if let ParameterValue::Float(max_speed) = speed {
+            info!("⚡ Max Speed: {:.1} m/s", max_speed);
+        }
+    }
+
+    if let Some(active) = param_client.get_parameter("robot.active")? {
+        if let ParameterValue::Bool(is_active) = active {
+            info!("🔋 Robot Active: {}", is_active);
+        }
+    }
+
+    if let Some(sensors) = param_client.get_parameter("robot.sensors.enabled")? {
+        if let ParameterValue::BoolArray(sensor_states) = sensors {
+            info!("📡 Sensors: {:?}", sensor_states);
+        }
+    }
+
+    if let Some(waypoints) = param_client.get_parameter("robot.waypoints")? {
+        if let ParameterValue::StringArray(points) = waypoints {
+            info!("🗺️  Waypoints: {:?}", points);
+        }
+    }
+
+    // === Parameter Updates Demo ===
+    info!("\n🔧 Testing Dynamic Parameter Updates...");
+    
+    // Simulate runtime parameter changes
     sleep(Duration::from_millis(500)).await;
     
-    // Read robot configuration
-    if let Ok(Some(robot_name)) = param_client.get_string("robot.name").await {
-        info!("🤖 Robot Name: {}", robot_name);
-    }
+    info!("Updating robot configuration...");
+    param_server.set_parameter("robot.max_speed", ParameterValue::Float(1.5))?;
+    param_server.set_parameter("robot.active", ParameterValue::Bool(false))?;
+    param_server.set_parameter("robot.current_task", ParameterValue::String("charging".to_string()))?;
     
-    if let Ok(Some(max_speed)) = param_client.get_float("robot.max_speed").await {
-        info!("⚡ Max Speed: {:.1} m/s", max_speed);
-    }
-    
-    // === Action System Demo ===
-    info!("\n🎯 Setting up Action Server for long-running tasks...");
-
-    // Create action server for "navigate_to_goal" action
-    let action_server = ActionServer::new(
-        "navigate_to_goal",
-        context.clone(),
-        |goal_request: ActionGoal<StringMsg>| -> Result<(StringMsg, Vec<StringMsg>)> {
-            let destination = &goal_request.goal.data;
-            let goal_id = goal_request.goal_id;
-            
-            info!("🚀 Navigation goal received: {} -> '{}'", goal_id, destination);
-            
-            // Simulate navigation with feedback
-            let mut feedbacks = Vec::new();
-            
-            // Planning phase
-            feedbacks.push(StringMsg {
-                data: format!("Planning path to '{}'...", destination),
-            });
-            
-            // Execution phases
-            let waypoints = vec![
-                format!("Starting navigation to '{}'", destination),
-                format!("25% complete - moving towards '{}'", destination),
-                format!("50% complete - halfway to '{}'", destination),
-                format!("75% complete - approaching '{}'", destination),
-                format!("95% complete - arriving at '{}'", destination),
-            ];
-            
-            for waypoint in waypoints {
-                feedbacks.push(StringMsg { data: waypoint });
-            }
-            
-            // Final result
-            let result = StringMsg {
-                data: format!("Successfully reached destination: '{}'", destination),
-            };
-            
-            info!("✅ Navigation completed: {}", goal_id);
-            Ok((result, feedbacks))
-        },
-        |goal_id: Uuid| -> Result<bool> {
-            info!("🛑 Cancel request for navigation goal: {}", goal_id);
-            // In a real robot, this would stop the navigation
-            Ok(true)
-        },
-    ).await?;
-
-    info!("🔧 Action server '{}' is ready", action_server.name());
-
-    // Create action client
-    let action_client = ActionClient::<StringMsg, StringMsg, StringMsg>::new(
-        "navigate_to_goal",
-        context.clone(),
-    ).await?;
-
-    // Wait for action server
-    info!("⏳ Waiting for action server...");
-    action_client.wait_for_server(Duration::from_secs(2)).await?;
-
-    // Set up feedback callback
-    action_client.on_feedback(|feedback: ActionFeedback<StringMsg>| {
-        info!("📡 Feedback: {}", feedback.feedback.data);
-    }).await?;
-
-    // Set up result callback
-    action_client.on_result(|result| {
-        match result.status {
-            GoalStatus::Succeeded => {
-                if let Some(res) = result.result {
-                    info!("🎉 Goal succeeded: {}", res.data);
-                }
-            }
-            GoalStatus::Aborted => {
-                info!("❌ Goal aborted");
-            }
-            GoalStatus::Preempted => {
-                info!("🛑 Goal preempted");
-            }
-            _ => {
-                info!("📊 Goal status: {:?}", result.status);
-            }
+    // Read updated values
+    info!("\n📊 Updated Configuration:");
+    if let Some(speed) = param_client.get_parameter("robot.max_speed")? {
+        if let ParameterValue::Float(new_speed) = speed {
+            info!("🔄 New Max Speed: {:.1} m/s", new_speed);
         }
-    }).await?;
-
-    // === Test Multiple Goals ===
-    info!("\n🎯 Testing Action System with multiple goals...");
+    }
     
-    let destinations = vec![
-        "Kitchen",
-        "Living Room", 
-        "Bedroom",
-        "Garage",
-    ];
-
-    for (i, destination) in destinations.iter().enumerate() {
-        info!("\n--- Goal {} ---", i + 1);
-        
-        // Send navigation goal
-        let goal = StringMsg {
-            data: destination.to_string(),
-        };
-        
-        match action_client.send_goal(goal).await {
-            Ok(goal_id) => {
-                info!("🎯 Sent navigation goal {}: {} -> '{}'", i + 1, goal_id, destination);
-                
-                // Let the action run for a bit
-                sleep(Duration::from_millis(1000)).await;
-                
-                // Optionally cancel some goals to demonstrate cancellation
-                if i == 2 { // Cancel the 3rd goal
-                    info!("🛑 Cancelling goal to demonstrate cancellation...");
-                    match action_client.cancel_goal(goal_id).await {
-                        Ok(cancelled) => {
-                            if cancelled {
-                                info!("✅ Goal cancellation successful");
-                            } else {
-                                info!("⚠️  Goal was not active for cancellation");
-                            }
-                        }
-                        Err(e) => {
-                            info!("❌ Failed to cancel goal: {}", e);
-                        }
-                    }
-                }
-            }
-            Err(e) => {
-                info!("❌ Failed to send goal: {}", e);
-            }
+    if let Some(active) = param_client.get_parameter("robot.active")? {
+        if let ParameterValue::Bool(is_active) = active {
+            info!("🔄 Robot State: {}", if is_active { "Active" } else { "Standby" });
         }
-        
-        sleep(Duration::from_millis(500)).await;
     }
 
-    // === Parameter Updates ===
-    info!("\n📋 Testing parameter updates...");
-    
-    // Update max speed parameter
-    param_client.set_parameter(
-        "robot.max_speed", 
-        ParameterValue::Float(3.0)
-    ).await?;
-    
-    info!("⚡ Updated max speed parameter");
-    
-    // Try to update read-only parameter (should fail)
-    match param_client.set_parameter(
-        "robot.name",
-        ParameterValue::String("Modified_Robot".to_string())
-    ).await {
-        Ok(_) => info!("⚠️  Unexpectedly succeeded in changing read-only parameter"),
-        Err(_) => info!("✅ Correctly rejected read-only parameter change"),
+    if let Some(task) = param_client.get_parameter("robot.current_task")? {
+        if let ParameterValue::String(current_task) = task {
+            info!("🔄 Current Task: {}", current_task);
+        }
     }
+
+    // === Parameter Management ===
+    info!("\n📋 Parameter Management:");
     
     // List all parameters
-    let param_names = param_client.list_parameters("").await?;
-    info!("📝 All parameters: {:?}", param_names);
+    let all_params = param_client.list_parameters()?;
+    info!("Total parameters: {}", all_params.len());
+    
+    for (key, value) in &all_params {
+        match value {
+            ParameterValue::String(s) => info!("  {} = '{}' (string)", key, s),
+            ParameterValue::Float(f) => info!("  {} = {:.2} (float)", key, f),
+            ParameterValue::Bool(b) => info!("  {} = {} (bool)", key, b),
+            ParameterValue::Int(i) => info!("  {} = {} (int)", key, i),
+            ParameterValue::StringArray(arr) => info!("  {} = {:?} (string[])", key, arr),
+            ParameterValue::BoolArray(arr) => info!("  {} = {:?} (bool[])", key, arr),
+            ParameterValue::IntArray(arr) => info!("  {} = {:?} (int[])", key, arr),
+            ParameterValue::FloatArray(arr) => info!("  {} = {:?} (float[])", key, arr),
+        }
+    }
 
-    // === Summary ===
-    info!("\n🎉 Example completed successfully!");
-    info!("📊 Demonstrated features:");
-    info!("   • Domain isolation (domain {})", domain_id);
-    info!("   • Parameter server with type safety");
-    info!("   • Action server/client for long-running tasks");
-    info!("   • Goal cancellation and feedback");
-    info!("   • Read-only parameter protection");
+    // === Parameter Operations ===
+    info!("\n🛠️  Testing Parameter Operations:");
     
-    info!("\n💡 Next: Try running multiple instances with different domain IDs!");
-    info!("   cargo run --example 04_actions_parameters  # Domain 42");
-    info!("   DOMAIN_ID=10 cargo run --example 04_actions_parameters  # Domain 10");
+    // Check parameter existence
+    assert!(param_client.has_parameter("robot.name")?);
+    info!("✅ Parameter 'robot.name' exists");
     
+    assert!(!param_client.has_parameter("robot.non_existent")?);
+    info!("✅ Parameter 'robot.non_existent' does not exist");
+    
+    // Test parameter deletion
+    param_server.set_parameter("robot.temp_param", ParameterValue::Int(42))?;
+    assert!(param_client.has_parameter("robot.temp_param")?);
+    
+    param_server.delete_parameter("robot.temp_param")?;
+    assert!(!param_client.has_parameter("robot.temp_param")?);
+    info!("✅ Parameter deletion works correctly");
+
+    // === Nested Parameter Structure ===
+    info!("\n🌲 Testing Nested Parameter Structure:");
+    
+    // Set hierarchical parameters
+    param_server.set_parameter("sensors.lidar.range", ParameterValue::Float(30.0))?;
+    param_server.set_parameter("sensors.lidar.enabled", ParameterValue::Bool(true))?;
+    param_server.set_parameter("sensors.camera.resolution", ParameterValue::StringArray(vec![
+        "1920x1080".to_string(),
+        "640x480".to_string(),
+    ]))?;
+    param_server.set_parameter("navigation.planner.algorithm", ParameterValue::String("A*".to_string()))?;
+    param_server.set_parameter("navigation.controller.gains", ParameterValue::FloatArray(vec![
+        1.0, 0.5, 0.1
+    ]))?;
+
+    // Display hierarchical structure
+    let all_params = param_client.list_parameters()?;
+    let mut sensor_params = 0;
+    let mut nav_params = 0;
+    let mut robot_params = 0;
+
+    for key in all_params.keys() {
+        if key.starts_with("sensors.") {
+            sensor_params += 1;
+        } else if key.starts_with("navigation.") {
+            nav_params += 1;
+        } else if key.starts_with("robot.") {
+            robot_params += 1;
+        }
+    }
+
+    info!("📊 Parameter Categories:");
+    info!("  🤖 Robot: {} parameters", robot_params);
+    info!("  📡 Sensors: {} parameters", sensor_params);
+    info!("  🗺️  Navigation: {} parameters", nav_params);
+
+    // === Performance Test ===
+    info!("\n⚡ Performance Test:");
+    
+    let start = std::time::Instant::now();
+    
+    // Set many parameters quickly
+    for i in 0..1000 {
+        param_server.set_parameter(
+            &format!("test.param_{}", i), 
+            ParameterValue::Int(i as i64)
+        )?;
+    }
+    
+    let set_duration = start.elapsed();
+    info!("Set 1000 parameters in: {:?}", set_duration);
+    
+    let start = std::time::Instant::now();
+    
+    // Read many parameters quickly
+    for i in 0..1000 {
+        let _ = param_client.get_parameter(&format!("test.param_{}", i))?;
+    }
+    
+    let get_duration = start.elapsed();
+    info!("Read 1000 parameters in: {:?}", get_duration);
+
+    // Cleanup test parameters
+    for i in 0..1000 {
+        param_server.delete_parameter(&format!("test.param_{}", i))?;
+    }
+
+    info!("\n✅ Parameter System example completed!");
+    info!("💡 This demonstrated comprehensive parameter management");
+    info!("🔧 Features shown:");
+    info!("   • Basic parameter operations (set/get/delete)");
+    info!("   • Multiple data types (string, int, float, bool, arrays)");
+    info!("   • Hierarchical parameter organization");
+    info!("   • Dynamic parameter updates");
+    info!("   • Parameter existence checking");
+    info!("   • Performance characteristics");
+
     Ok(())
 } 
