@@ -1,26 +1,22 @@
 # miniROS-rs
 
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://ruziniuuuuu.github.io/miniROS-rs/)
-[![DeepWiki](https://img.shields.io/badge/docs-DeepWiki-purple)](https://deepwiki.com/ruziniuuuuu/miniROS-rs)
 [![macOS Tested](https://img.shields.io/badge/macOS-tested-brightgreen?logo=apple)](https://github.com/ruziniuuuuu/miniROS-rs)
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange?logo=rust)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE-MIT)
 
-A **minimal**, high-performance ROS2-compatible middleware written in Rust. Focused on core robotics communication with zero bloat.
+**Minimal**, high-performance robotics middleware. Core functionality only, maximum efficiency.
 
 ## Why Mini?
 
-- 🎯 **Core Only**: Essential pub/sub, services, and discovery - nothing more
-- ⚡ **Fast**: Rust performance with async I/O and zero-copy serialization  
-- 🐍 **Simple**: Clean APIs in both Rust and Python
-- 🔗 **Compatible**: ROS2 DDS transport support
-- 📦 **Lightweight**: Minimal dependencies, cross-platform
+- 🎯 **Core Only**: Essential robotics communication - nothing more
+- ⚡ **Fast**: 4x faster than ROS2, 10x smaller memory footprint
+- 🐍 **Simple**: Clean APIs in Rust and Python
+- 🔗 **Compatible**: Works with ROS2 when needed
 
 ## Quick Start
 
-> 📖 **For detailed tutorials, visit our [complete documentation](https://ruziniuuuuu.github.io/miniROS-rs/)**
-
-### Rust
+### Rust (30 seconds)
 
 ```toml
 [dependencies]
@@ -37,21 +33,20 @@ async fn main() -> Result<()> {
     node.init().await?;
     
     // Publisher
-    let pub = node.create_publisher::<StringMsg>("topic").await?;
+    let pub = node.create_publisher::<StringMsg>("/topic").await?;
     pub.publish(&StringMsg { data: "Hello!".into() }).await?;
     
     // Subscriber  
-    let sub = node.create_subscriber::<StringMsg>("topic").await?;
+    let sub = node.create_subscriber::<StringMsg>("/topic").await?;
     sub.on_message(|msg| println!("Got: {}", msg.data))?;
     
     node.spin().await
 }
 ```
 
-### Python
+### Python (ROS2 Compatible)
 
 ```bash
-# Install (requires Rust toolchain)
 pip install maturin
 maturin develop --features python
 ```
@@ -63,7 +58,7 @@ mini_ros.init()
 node = mini_ros.Node('mini_node')
 
 # Publisher
-pub = node.create_publisher(mini_ros.String, 'topic', 10)
+pub = node.create_publisher(mini_ros.String, '/topic', 10)
 msg = mini_ros.String()
 msg.data = 'Hello!'
 pub.publish(msg)
@@ -72,138 +67,117 @@ pub.publish(msg)
 def callback(msg):
     print(f'Got: {msg.data}')
 
-sub = node.create_subscription(mini_ros.String, 'topic', callback, 10)
+sub = node.create_subscription(mini_ros.String, '/topic', callback, 10)
 mini_ros.spin(node)
 ```
 
 ## Core Features
 
-### Transport Options
-```bash
-# TCP (default) - simple and reliable
-cargo run --example 01_basic_pubsub
-
-# DDS - ROS2 compatible  
-cargo run --example 01_basic_pubsub --features dds-transport
-```
-
-### Built-in Messages
-- `StringMsg`, `Int32Msg`, `Float64Msg`, `BoolMsg`
-- Custom messages via Serde traits
-- Image and sensor data support
-
-### Services
+### Essential Communication
 ```rust
-// Server
-let service = node.create_service("add", |req: (i32, i32)| {
+// Pub/Sub
+let pub = node.create_publisher::<StringMsg>("/data").await?;
+let sub = node.create_subscriber::<StringMsg>("/data").await?;
+
+// Services
+let service = node.create_service("/add", |req: (i32, i32)| {
     Ok(req.0 + req.1)
 }).await?;
 
-// Client
-let client = node.create_service_client::<(i32, i32), i32>("add").await?;
-let result = client.call((2, 3)).await?; // 5
+// Built-in types: StringMsg, Int32Msg, Float64Msg, BoolMsg
+```
+
+### Transport Options
+```bash
+# Simple TCP (default)
+cargo run --example 01_basic_pubsub
+
+# ROS2 DDS compatibility  
+cargo run --example 01_basic_pubsub --features dds-transport
 ```
 
 ## Examples
 
 ```bash
-git clone <repo>
+git clone https://github.com/ruziniuuuuu/miniROS-rs
 cd miniROS-rs
 
 # Core examples
-cargo run --example 01_basic_pubsub          # Pub/sub basics
-cargo run --example 02_custom_messages       # Custom types
-cargo run --example 03_services              # Request/response
+cargo run --example 01_basic_pubsub     # Pub/sub basics
+cargo run --example 02_custom_messages  # Custom types
+cargo run --example 03_services         # Request/response
 
-# Python examples  
-python python/examples/talker.py             # Basic publisher
-python python/examples/image_publisher.py    # OpenCV integration
-python python/examples/robot_visualization.py # 3D visualization
+# Python examples
+python python/examples/minimal_publisher.py
+python python/examples/minimal_subscriber.py
 ```
 
-## 📚 Documentation
-
-**🔗 [Live Documentation](https://ruziniuuuuu.github.io/miniROS-rs/)** - Complete interactive documentation  
-**🌐 [DeepWiki](https://deepwiki.com/ruziniuuuuu/miniROS-rs)** - Alternative documentation view
-
-### Quick Links
-- **[Quick Start](https://ruziniuuuuu.github.io/miniROS-rs/quick-start.html)** - 5-minute tutorial
-- **[Python Bindings](https://ruziniuuuuu.github.io/miniROS-rs/python-bindings.html)** - Python API guide
-- **[DDS Transport](https://ruziniuuuuu.github.io/miniROS-rs/dds-transport.html)** - ROS2 compatibility
-- **[Performance](https://ruziniuuuuu.github.io/miniROS-rs/performance.html)** - Benchmarks and optimization
-
-### Local Development
-```bash
-cd docs && mdbook serve --open
-```
-
-## Architecture
-
-```
-Application Layer (Your Code)
-├── Rust API / Python Bindings  
-├── Node Management & Discovery
-├── Pub/Sub & Services
-├── Message Serialization
-├── Transport (TCP/DDS)
-└── Network Layer
-```
-
-## Performance
+## Performance vs ROS2
 
 | Metric | miniROS | ROS2 |
 |--------|---------|------|
-| Message Latency | ~50μs | ~200μs |
-| Memory Usage | ~2MB | ~20MB |
-| Startup Time | ~10ms | ~500ms |
+| Latency | ~50μs | ~200μs |
+| Memory | ~2MB | ~20MB |
+| Startup | ~10ms | ~500ms |
 | Binary Size | ~5MB | ~50MB |
 
 ## Platform Support
 
 - ✅ **Linux** - Full support
-- ✅ **macOS** - Full support (tested on macOS 14.5+) 🍎
+- ✅ **macOS** - Full support 🍎  
 - ✅ **Windows** - Core features
 
-## Configuration
+## What's Included
 
-### Feature Flags
-```toml
-[dependencies]
-mini-ros = { version = "0.1.2", features = [
-    "dds-transport",    # ROS2 DDS compatibility
-    "python",           # Python bindings
-    "visualization"     # 3D visualization tools
-]}
-```
+### ✅ Core Features
+- **Pub/Sub** - Topic-based communication
+- **Services** - Request/response patterns
+- **Discovery** - Automatic node discovery
+- **Custom Messages** - Define your own types
+- **Python Bindings** - ROS2 rclpy compatible
 
-### Domain Isolation
-```rust
-let context = Context::with_domain_id(42)?;
-let node = Node::with_context("isolated_node", context)?;
-```
+### 🚧 Optional Features
+- **Actions** - Long-running tasks (`--features actions`)
+- **Parameters** - Dynamic configuration (`--features parameters`) 
+- **Visualization** - 3D data display (`--features visualization`)
+- **DDS Transport** - ROS2 compatibility (`--features dds-transport`)
 
 ## vs ROS2
 
 | Aspect | miniROS | ROS2 |
 |--------|---------|------|
-| **Philosophy** | Minimal core | Full ecosystem |
-| **Language** | Rust-first | C++-first |
-| **Memory** | Safe by design | Runtime checks |
-| **Performance** | Zero-cost abstractions | Overhead layers |
-| **Learning** | Simple APIs | Complex architecture |
-| **Size** | Lightweight | Feature-heavy |
+| **Philosophy** | Essential core only | Full ecosystem |
+| **Complexity** | Minimal | Complex |
+| **Performance** | Optimized | General-purpose |
+| **Learning** | Easy | Steep curve |
+| **Size** | Lightweight | Heavy |
+
+## When to Use
+
+### ✅ Choose miniROS for:
+- Performance-critical applications
+- Embedded systems
+- Learning robotics concepts
+- Simple communication needs
+- Fast prototyping
+
+### ❌ Use ROS2 for:
+- Large robotics ecosystems
+- Complex navigation stacks
+- Existing ROS2 codebases
+- Team standardization
 
 ## Contributing
 
 1. Fork & clone
-2. `cargo test` - ensure tests pass
-3. Add minimal, focused features
-4. Submit PR with clear description
+2. Keep it **mini** - core functionality only
+3. `cargo test` - ensure tests pass
+4. Submit focused PRs
 
 ## License
 
-Dual-licensed: MIT or Apache-2.0
+MIT or Apache-2.0
 
 ---
 
-**miniROS**: *Maximum robotics capability, minimum complexity*
+**miniROS**: *Essential robotics, maximum efficiency*

@@ -1,99 +1,174 @@
 # Examples
 
-Learn miniROS-rs through hands-on examples. Each example builds upon the previous ones.
+Learn miniROS with focused examples. Each demonstrates **one core concept**.
 
-## Learning Path
+## Quick Start
 
-### 📚 Basic Communication (Examples 1-3)
+```bash
+git clone https://github.com/ruziniuuuuu/miniROS-rs
+cd miniROS-rs
 
-#### 01 - Basic Pub/Sub
+# Run any example
+cargo run --example 01_basic_pubsub
+```
+
+## Core Examples (Rust)
+
+### 01 - Basic Pub/Sub
 ```bash
 cargo run --example 01_basic_pubsub
 ```
-**Learn:** Node creation, publishing, subscribing
 
-#### 02 - Custom Messages  
+**What you'll learn**: Create publishers and subscribers
+- Node creation
+- Topic-based communication  
+- Message types
+
+### 02 - Custom Messages
 ```bash
 cargo run --example 02_custom_messages
 ```
-**Learn:** Define custom data types, serialization
 
-#### 03 - Services
+**What you'll learn**: Define your own message types
+- Serde serialization
+- Custom structs as messages
+- Type safety
+
+### 03 - Services
 ```bash
-cargo run --example 03_services  
+cargo run --example 03_services
 ```
-**Learn:** Request/response communication
 
-### 📊 Visualization (Examples 4, 6)
+**What you'll learn**: Request/response communication
+- Service servers
+- Service clients
+- Synchronous communication
 
-#### 04 - Basic Visualization
+## Python Examples
+
+All Python examples use **identical ROS2 API**:
+
+### Minimal Publisher
 ```bash
-cargo run --example 04_visualization_basic
+python python/examples/minimal_publisher.py
 ```
-**Learn:** Real-time data plotting, automatic GUI startup
 
-#### 06 - Advanced 3D Visualization
+```python
+import mini_ros
+
+mini_ros.init()
+node = mini_ros.Node('publisher')
+pub = node.create_publisher(mini_ros.String, '/topic', 10)
+
+msg = mini_ros.String()
+msg.data = 'Hello!'
+pub.publish(msg)
+
+node.destroy_node()
+mini_ros.shutdown()
+```
+
+### Minimal Subscriber
 ```bash
-cargo run --example 06_visualization_advanced
+python python/examples/minimal_subscriber.py
 ```
-**Learn:** 3D robot poses, point clouds, laser scans
 
-### 🚀 High Performance (Example 5)
+```python
+import mini_ros
 
-#### 05 - Zenoh Transport
+def callback(msg):
+    print(f'Received: {msg.data}')
+
+mini_ros.init()
+node = mini_ros.Node('subscriber')
+sub = node.create_subscription(mini_ros.String, '/topic', callback, 10)
+mini_ros.spin(node)
+```
+
+## Advanced Examples (Optional Features)
+
+### Actions (Long-running tasks)
 ```bash
-cargo run --example 05_zenoh_transport
+cargo run --example 04_actions --features actions
 ```
-**Learn:** High-performance communication layer
 
-### 🤖 Complete System (Example 7)
-
-#### 07 - Integrated System
+### Parameters (Dynamic config)
 ```bash
-cargo run --example 07_integrated_system
+cargo run --example 05_parameters --features parameters
 ```
-**Learn:** Multi-node coordination, sensor simulation, mission control
 
-## Code Structure
-
-Each example follows this pattern:
-
-```rust
-//! Example N: Description
-//! 
-//! Learning Objectives:
-//! - Objective 1
-//! - Objective 2
-//! 
-//! Run with: cargo run --example example_name
-
-use mini_ros::prelude::*;
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    // Example code...
-    Ok(())
-}
+### Visualization (3D display)
+```bash
+cargo run --example 06_visualization --features visualization
 ```
+
+## Multi-Terminal Demo
+
+### Terminal 1 - Publisher
+```bash
+cargo run --example 01_basic_pubsub
+```
+
+### Terminal 2 - Subscriber  
+```bash
+cargo run --example 01_basic_pubsub
+```
+
+### Terminal 3 - Python Node
+```bash
+python python/examples/minimal_subscriber.py
+```
+
+All nodes automatically discover each other. No configuration needed.
+
+## Transport Options
+
+### Default TCP
+```bash
+cargo run --example 01_basic_pubsub
+```
+
+### ROS2 Compatible DDS
+```bash
+cargo run --example 01_basic_pubsub --features dds-transport
+```
+
+Interoperates with ROS2 nodes using DDS.
+
+## Example Output
+
+```
+[INFO] Node 'publisher' initialized
+[INFO] Publishing to '/chat': Hello miniROS!
+[INFO] Node 'subscriber' received: Hello miniROS!
+```
+
+Clean, minimal logging. No debug noise.
 
 ## Troubleshooting
 
-### Network Issues (macOS)
-If examples 1, 2, 3, 5 fail with network errors:
+### Port Conflicts
 ```bash
-sudo dscacheutil -flushcache
-sudo killall -HUP mDNSResponder
+# Use different port
+MINI_ROS_PORT=8080 cargo run --example 01_basic_pubsub
 ```
 
-### Visualization Not Working
-Make sure Rerun CLI version matches SDK:
+### Discovery Issues
 ```bash
-cargo install rerun-cli@0.20.3 --force
+# Check network
+ping localhost
+
+# Restart with debug
+RUST_LOG=debug cargo run --example 01_basic_pubsub
 ```
 
 ## Next Steps
 
-After running examples:
-1. Modify example code to experiment
-2. Read [Core Concepts](./concepts.md) for deeper understanding  
-3. Check [API Reference](./api.md) for complete documentation 
+1. **Start with 01-03** - Core patterns
+2. **Try Python examples** - ROS2 compatibility  
+3. **Add features** - Actions, parameters as needed
+4. **Build your robot** - Use patterns in your project
+
+---
+
+*Examples: Learn by doing, one concept at a time* 
