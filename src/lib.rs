@@ -13,6 +13,10 @@ pub mod parameter;
 pub mod publisher;
 pub mod service;
 pub mod subscriber;
+pub mod types;
+
+// Performance and benchmarking
+pub mod benchmarks;
 
 // Transport layer - DDS-based by default for ROS2 compatibility
 #[cfg(feature = "dds-transport")]

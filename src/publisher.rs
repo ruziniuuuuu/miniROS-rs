@@ -1,7 +1,9 @@
 //! Publisher implementation for MiniROS
 
 use crate::core::Context;
-use crate::error::{MiniRosError, Result};
+#[cfg(any(feature = "dds-transport", feature = "tcp-transport"))]
+use crate::error::MiniRosError;
+use crate::error::Result;
 use crate::message::Message;
 
 use std::marker::PhantomData;
@@ -133,27 +135,10 @@ impl<T: Message> Publisher<T> {
             }
         }
 
-        // If neither DDS nor TCP transport is available, use zenoh transport as fallback
+        // If no transport is available, use in-memory only
         #[cfg(not(any(feature = "dds-transport", feature = "tcp-transport")))]
         {
-            // Serialize the message
-            let data = bincode::serialize(message)
-                .map_err(|e| MiniRosError::SerializationError(e.to_string()))?;
-
-            // Use zenoh transport
-            let has_zenoh_transport = {
-                let zenoh_transport_lock = self.context.inner.zenoh_transport.read();
-                zenoh_transport_lock.is_some()
-            };
-            if has_zenoh_transport {
-                let zenoh_transport_lock = self.context.inner.zenoh_transport.read();
-                if let Some(zenoh_transport) = zenoh_transport_lock.as_ref() {
-                    zenoh_transport.publish(&self.topic, data).await?;
-                    tracing::debug!("Published message via Zenoh transport");
-                }
-            } else {
-                tracing::warn!("No transport available for publishing");
-            }
+            tracing::debug!("Using in-memory only publishing (no external transport configured)");
         }
 
         Ok(())

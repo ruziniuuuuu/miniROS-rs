@@ -195,6 +195,54 @@ impl StringMessage {
     }
 }
 
+/// Python wrapper for Pose message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyPoseMessage {
+    #[pyo3(get, set)]
+    pub position: [f32; 3],
+    #[pyo3(get, set)]
+    pub orientation: [f32; 4],
+    #[pyo3(get, set)]
+    pub frame_id: String,
+}
+
+#[pymethods]
+impl PyPoseMessage {
+    #[new]
+    fn new() -> Self {
+        PyPoseMessage {
+            position: [0.0, 0.0, 0.0],
+            orientation: [0.0, 0.0, 0.0, 1.0], // Unit quaternion
+            frame_id: "".to_string(),
+        }
+    }
+
+    /// Validate the pose (especially quaternion normalization)
+    fn validate(&self) -> PyResult<bool> {
+        // Check position for finite values
+        for &coord in &self.position {
+            if !coord.is_finite() {
+                return Ok(false);
+            }
+        }
+
+        // Check quaternion normalization
+        let norm = (self.orientation[0].powi(2)
+            + self.orientation[1].powi(2)
+            + self.orientation[2].powi(2)
+            + self.orientation[3].powi(2))
+        .sqrt();
+
+        if (norm - 1.0).abs() > 0.1 {
+            // Allow some tolerance
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
+}
+
 /// Logger for Python
 #[pyclass]
 pub struct Logger {
@@ -222,6 +270,102 @@ impl Logger {
     }
 }
 
+/// Python wrapper for VisualizationClient
+#[pyclass]
+pub struct PyVisualizationClient {
+    client: Arc<crate::visualization::VisualizationClient>,
+}
+
+#[pymethods]
+impl PyVisualizationClient {
+    #[new]
+    #[pyo3(signature = (application_id = "miniROS", spawn_viewer = false))]
+    fn new(application_id: &str, spawn_viewer: bool) -> PyResult<Self> {
+        let config = crate::visualization::VisualizationConfig {
+            application_id: application_id.to_string(),
+            spawn_viewer,
+        };
+
+        let client = crate::visualization::VisualizationClient::new(config)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+
+        Ok(Self {
+            client: Arc::new(client),
+        })
+    }
+
+    /// Log a scalar value for plotting
+    #[pyo3(signature = (entity_path, value))]
+    fn log_scalar(&self, entity_path: &str, value: f64) -> PyResult<()> {
+        self.client
+            .log_scalar(entity_path, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Log 3D points for visualization
+    #[pyo3(signature = (entity_path, points))]
+    fn log_points(&self, entity_path: &str, points: Vec<Vec<f32>>) -> PyResult<()> {
+        // Convert Vec<Vec<f32>> to Vec<[f32; 3]>
+        let points_3d: Vec<[f32; 3]> = points
+            .into_iter()
+            .filter_map(|p| {
+                if p.len() >= 3 {
+                    Some([p[0], p[1], p[2]])
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        self.client
+            .log_points(entity_path, points_3d)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Log a 3D transform (position + rotation)
+    #[pyo3(signature = (entity_path, translation, rotation_quat))]
+    fn log_transform(
+        &self,
+        entity_path: &str,
+        translation: Vec<f32>,
+        rotation_quat: Vec<f32>,
+    ) -> PyResult<()> {
+        if translation.len() != 3 || rotation_quat.len() != 4 {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Translation must be [x,y,z] and rotation must be [x,y,z,w] quaternion",
+            ));
+        }
+
+        let trans = [translation[0], translation[1], translation[2]];
+        let rot = [
+            rotation_quat[0],
+            rotation_quat[1],
+            rotation_quat[2],
+            rotation_quat[3],
+        ];
+
+        self.client
+            .log_transform(entity_path, trans, rot)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Log text message
+    #[pyo3(signature = (entity_path, message))]
+    fn log_text(&self, entity_path: &str, message: &str) -> PyResult<()> {
+        self.client
+            .log_text(entity_path, message)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Set timeline for data logging
+    #[pyo3(signature = (timeline, nanos))]
+    fn set_time(&self, timeline: &str, nanos: i64) -> PyResult<()> {
+        self.client
+            .set_time(timeline, nanos)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+}
+
 /// Initialize function for Python module
 pub fn init_python_module(m: &PyModule) -> PyResult<()> {
     m.add_class::<Node>()?;
@@ -229,10 +373,17 @@ pub fn init_python_module(m: &PyModule) -> PyResult<()> {
     m.add_class::<Subscription>()?;
     m.add_class::<StringMessage>()?;
     m.add_class::<Logger>()?;
+    m.add_class::<PyVisualizationClient>()?;
 
     // Add message types as module attributes
     m.add("StringMessage", m.py().get_type::<StringMessage>())?;
     m.add("String", m.py().get_type::<StringMessage>())?; // For backward compatibility
+    m.add("PoseMessage", m.py().get_type::<PyPoseMessage>())?;
+    m.add("Pose", m.py().get_type::<PyPoseMessage>())?; // For backward compatibility
+    m.add(
+        "VisualizationClient",
+        m.py().get_type::<PyVisualizationClient>(),
+    )?; // Expose as VisualizationClient
 
     // Add utility functions
     m.add_function(wrap_pyfunction!(init, m)?)?;

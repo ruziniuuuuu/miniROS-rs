@@ -1,5 +1,12 @@
 # miniROS-rs
 
+Add commentMore actions
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://ruziniuuuuu.github.io/miniROS-rs/)
+[![DeepWiki](https://img.shields.io/badge/wiki-DeepWiki-purple)](https://deepwiki.com/ruziniuuuuu/miniROS-rs)
+[![macOS Tested](https://img.shields.io/badge/macOS-tested-brightgreen?logo=apple)](https://github.com/ruziniuuuuu/miniROS-rs)
+[![Rust](https://img.shields.io/badge/rust-1.70+-orange?logo=rust)](https://www.rust-lang.org)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE-MIT)
+
 A **lightweight, high-performance** ROS2-like middleware implementation in Rust with Python bindings.
 
 > **"Mini" Philosophy**: Focus on **core functionality only** - pub/sub, services, parameters, actions, and visualization. Maximum performance with minimum complexity.
@@ -175,12 +182,12 @@ python simple_param.py
 - [x] Discovery service
 - [x] Examples and documentation
 
-### Phase 2: Advanced 🚧
+### Phase 2: Advanced ✅
 - [x] Actions (goal-based tasks)
 - [x] Parameters (dynamic config)
-- [ ] Visualization (Rerun integration)
-- [ ] Cross-language type system
-- [ ] Performance benchmarks
+- [x] Visualization (Rerun integration)
+- [x] Cross-language type system
+- [x] Performance benchmarks
 
 ### Phase 3: Ecosystem 🔮
 - [ ] ROS2 bridge compatibility
