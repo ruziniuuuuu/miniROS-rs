@@ -2,110 +2,220 @@
 //!
 //! Command-line interface for miniROS package and launch management.
 //! Provides ROS2-like commands for launching nodes and managing packages.
+//! 
+//! Philosophy: Keep it minimal - essential robotics functionality only.
 
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command, ValueHint};
+use clap_complete::{generate, Generator, Shell};
 use mini_ros::prelude::*;
+use std::env;
+use std::io;
 use std::process;
 use tracing::{error, info};
 
-#[tokio::main]
-async fn main() {
-    // Initialize tracing
-    tracing_subscriber::fmt::init();
+/// Generate shell completions for the CLI
+fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
+    generate(generator, cmd, cmd.get_name().to_string(), &mut io::stdout());
+}
 
-    let matches = Command::new("mini_ros")
+/// Build CLI command structure
+fn build_cli() -> Command {
+    Command::new("mini_ros")
         .version("0.1.0")
-        .author("miniROS Team")
-        .about("miniROS command-line interface")
+        .author("miniROS Team <team@mini-ros.org>")
+        .about("🤖 miniROS CLI - Minimal robotics middleware")
+        .long_about("miniROS command-line interface for package management and node orchestration.\n\nPhilosophy: Maximum robotics performance, minimum complexity.")
+        .arg_required_else_help(true)
         .subcommand(
             Command::new("launch")
-                .about("Launch nodes from launch files")
+                .about("🚀 Launch nodes from launch files")
+                .long_about("Launch multiple nodes from YAML configuration files.\nEquivalent to 'ros2 launch' but simpler.")
                 .arg(
                     Arg::new("package")
-                        .help("Package name")
+                        .help("Package name containing the launch file")
                         .required(true)
-                        .index(1),
+                        .index(1)
+                        .value_hint(ValueHint::Other),
                 )
                 .arg(
                     Arg::new("launch_file")
-                        .help("Launch file name")
+                        .help("Launch file name (without .yaml extension)")
                         .required(true)
-                        .index(2),
+                        .index(2)
+                        .value_hint(ValueHint::FilePath),
                 )
                 .arg(
                     Arg::new("args")
-                        .help("Additional arguments")
+                        .help("Additional arguments passed to launched nodes")
+                        .long("args")
                         .num_args(0..)
-                        .last(true),
-                ),
+                        .action(clap::ArgAction::Append)
+                        .value_name("ARG"),
+                )
+                .after_help("Examples:\n  mini_ros launch turtlebot simulation\n  mini_ros launch my_pkg my_launch")
         )
         .subcommand(
             Command::new("pkg")
-                .about("Package management commands")
-                .subcommand(Command::new("list").about("List available packages"))
+                .about("📦 Package management commands")
+                .long_about("Manage miniROS packages - list, create, and inspect packages.")
+                .arg_required_else_help(true)
+                .subcommand(
+                    Command::new("list")
+                        .about("List all available packages")
+                        .long_about("Display all discovered packages with their metadata.")
+                )
                 .subcommand(
                     Command::new("create")
                         .about("Create a new package")
+                        .long_about("Create a new miniROS package with proper structure and manifest.")
                         .arg(
                             Arg::new("name")
-                                .help("Package name")
+                                .help("Package name (snake_case recommended)")
                                 .required(true)
-                                .index(1),
+                                .index(1)
+                                .value_hint(ValueHint::Other),
                         )
                         .arg(
                             Arg::new("path")
-                                .help("Package path (optional)")
+                                .help("Custom package directory path")
                                 .long("path")
-                                .value_name("PATH"),
-                        ),
+                                .short('p')
+                                .value_name("DIR")
+                                .value_hint(ValueHint::DirPath),
+                        )
+                        .arg(
+                            Arg::new("python")
+                                .help("Enable Python support in this package")
+                                .long("python")
+                                .action(clap::ArgAction::SetTrue),
+                        )
+                        .after_help("Examples:\n  mini_ros pkg create my_robot\n  mini_ros pkg create my_robot --path ./packages --python")
                 )
                 .subcommand(
-                    Command::new("info").about("Show package information").arg(
-                        Arg::new("name")
-                            .help("Package name")
-                            .required(true)
-                            .index(1),
-                    ),
+                    Command::new("info")
+                        .about("Show detailed package information")
+                        .long_about("Display comprehensive information about a specific package.")
+                        .arg(
+                            Arg::new("name")
+                                .help("Package name to inspect")
+                                .required(true)
+                                .index(1)
+                                .value_hint(ValueHint::Other),
+                        )
+                        .after_help("Examples:\n  mini_ros pkg info turtlebot")
                 ),
         )
         .subcommand(
             Command::new("run")
-                .about("Run a single node")
+                .about("🏃 Run a single node")
+                .long_about("Execute a single node from a package.\nEquivalent to 'ros2 run' but faster.")
                 .arg(
                     Arg::new("package")
-                        .help("Package name")
+                        .help("Package name containing the executable")
                         .required(true)
-                        .index(1),
+                        .index(1)
+                        .value_hint(ValueHint::Other),
                 )
                 .arg(
                     Arg::new("executable")
-                        .help("Executable name")
+                        .help("Executable name to run")
                         .required(true)
-                        .index(2),
+                        .index(2)
+                        .value_hint(ValueHint::Other),
                 )
                 .arg(
                     Arg::new("args")
-                        .help("Additional arguments")
+                        .help("Arguments passed to the executable")
+                        .long("args")
                         .num_args(0..)
-                        .last(true),
-                ),
+                        .action(clap::ArgAction::Append)
+                        .value_name("ARG"),
+                )
+                .after_help("Examples:\n  mini_ros run turtlebot controller\n  mini_ros run my_pkg my_node --param value")
         )
-        .get_matches();
+        .subcommand(
+            Command::new("completions")
+                .about("🔧 Generate shell completions")
+                .long_about("Generate shell completion scripts for better CLI experience.")
+                .arg(
+                    Arg::new("shell")
+                        .help("Shell type to generate completions for")
+                        .required(true)
+                        .index(1)
+                        .value_parser(clap::builder::EnumValueParser::<Shell>::new()),
+                )
+                .after_help("Examples:\n  mini_ros completions bash > ~/.bash_completion\n  mini_ros completions zsh > ~/.zsh_completions/_mini_ros")
+        )
+        .subcommand(
+            Command::new("version")
+                .about("📋 Show version information")
+                .long_about("Display miniROS version and build information.")
+                .arg(
+                    Arg::new("verbose")
+                        .help("Show detailed version information")
+                        .long("verbose")
+                        .short('v')
+                        .action(clap::ArgAction::SetTrue),
+                )
+        )
+}
+
+#[tokio::main]
+async fn main() {
+    // Initialize tracing with better formatting
+    let filter = env::var("MINI_ROS_LOG").unwrap_or_else(|_| "info".to_string());
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::new(filter))
+        .with_target(false)
+        .init();
+
+    let matches = build_cli().get_matches();
 
     let result = match matches.subcommand() {
         Some(("launch", sub_matches)) => handle_launch_command(sub_matches).await,
         Some(("pkg", sub_matches)) => handle_pkg_command(sub_matches).await,
         Some(("run", sub_matches)) => handle_run_command(sub_matches).await,
+        Some(("completions", sub_matches)) => handle_completions_command(sub_matches),
+        Some(("version", sub_matches)) => handle_version_command(sub_matches),
         _ => {
-            println!("Use --help for usage information");
-            Ok(())
+            // This should not happen due to arg_required_else_help(true)
+            eprintln!("No command specified. Use --help for usage information.");
+            process::exit(1);
         }
     };
 
     if let Err(e) = result {
-        error!("Command failed: {}", e);
+        error!("❌ Command failed: {}", e);
         process::exit(1);
     }
+}
+
+/// Handle completions command
+fn handle_completions_command(matches: &ArgMatches) -> Result<()> {
+    let shell = matches.get_one::<Shell>("shell").unwrap();
+    let mut cmd = build_cli();
+    
+    info!("🔧 Generating {} completions...", shell);
+    print_completions(*shell, &mut cmd);
+    
+    Ok(())
+}
+
+/// Handle version command
+fn handle_version_command(matches: &ArgMatches) -> Result<()> {
+    let verbose = matches.get_flag("verbose");
+    
+    if verbose {
+        println!("🤖 miniROS CLI v{}", env!("CARGO_PKG_VERSION"));
+        println!("📦 Built with Rust {}", env::var("RUSTC_VERSION").unwrap_or_else(|_| "unknown".to_string()));
+        println!("🏗️  Target: {}", std::env::consts::ARCH);
+        println!("🔧 OS: {}", std::env::consts::OS);
+        println!("💡 Philosophy: Maximum robotics performance, minimum complexity");
+    } else {
+        println!("miniROS CLI v{}", env!("CARGO_PKG_VERSION"));
+    }
+    
+    Ok(())
 }
 
 /// Handle launch command

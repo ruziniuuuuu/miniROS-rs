@@ -7,6 +7,9 @@ description = "A high-performance, cross-platform ROS2-like middleware implement
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/ruziniuuuuu/miniROS-rs"
 repository = "https://github.com/ruziniuuuuu/miniROS-rs"
+readme = "README.md"
+keywords = ["robotics", "ros2", "middleware", "async", "real-time"]
+categories = ["science::robotics", "network-programming", "asynchronous"]
 
 [lib]
 name = "mini_ros"
@@ -19,7 +22,7 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 tracing = "0.1"
-tracing-subscriber = "0.3"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 async-trait = "0.1"
 dashmap = "5.0"
 crossbeam-channel = "0.5"
@@ -43,6 +46,7 @@ image = { version = "0.24", optional = true }
 lazy_static = "1.4"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.0", features = ["derive"] }
+clap_complete = "4.0"  # Added for shell completions
 
 # Platform-specific dependencies for terminal control
 [target.'cfg(unix)'.dependencies]
@@ -127,3 +131,5 @@ path = "examples/15_complete_demo.rs"
 [[bin]]
 name = "mini_ros"
 path = "src/bin/mini_ros.rs"
+
+# Workspace configuration removed - python is not a Rust crate
