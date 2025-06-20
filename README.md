@@ -123,6 +123,15 @@ cargo run --example 04_visualization_basic --features visualization
 
 # Complete system integration
 cargo run --example 07_integrated_system
+
+# Turtlebot controller (classic ROS robotics)
+cargo run --example 12_turtlebot_controller
+
+# Turtlebot keyboard control (teleop)
+cargo run --example 13_turtlebot_teleop
+
+# Turtlebot simulator with Rerun visualization
+cargo run --example 14_turtlebot_simulator --features visualization
 ```
 
 ### Python Examples
@@ -138,6 +147,9 @@ python minimal_subscriber.py
 
 # Complete pub/sub demo
 python simple_pubsub.py
+
+# Turtlebot controller (robotics control)
+python turtlebot_controller.py
 ```
 
 ## 🏗️ Architecture

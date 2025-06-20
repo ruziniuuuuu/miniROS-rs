@@ -119,6 +119,14 @@ impl TypeRegistry {
                 let _: BoolMessage = bincode::deserialize(data)
                     .map_err(|e| MiniRosError::Custom(format!("Invalid Bool message: {}", e)))?;
             }
+            "Twist" => {
+                let _: TwistMessage = bincode::deserialize(data)
+                    .map_err(|e| MiniRosError::Custom(format!("Invalid Twist message: {}", e)))?;
+            }
+            "Odometry" => {
+                let _: OdometryMessage = bincode::deserialize(data)
+                    .map_err(|e| MiniRosError::Custom(format!("Invalid Odometry message: {}", e)))?;
+            }
             _ => {
                 return Err(MiniRosError::Custom(format!(
                     "Validation not implemented for type: {}",
@@ -141,6 +149,8 @@ impl TypeRegistry {
         self.register::<BytesMessage>();
         self.register::<PointCloudMessage>();
         self.register::<PoseMessage>();
+        self.register::<TwistMessage>();
+        self.register::<OdometryMessage>();
     }
 }
 
@@ -479,6 +489,137 @@ impl MiniRosMessage for PoseMessage {
             ));
         }
 
+        Ok(())
+    }
+}
+
+/// Velocity command message (twist) for robot motion control
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TwistMessage {
+    pub linear: Vector3,  // Linear velocity (m/s)
+    pub angular: Vector3, // Angular velocity (rad/s)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Vector3 {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+impl MiniRosMessage for TwistMessage {
+    fn message_type() -> &'static str {
+        "Twist"
+    }
+
+    fn schema() -> MessageSchema {
+        MessageSchema {
+            name: "Twist".to_string(),
+            fields: vec![
+                MessageField {
+                    name: "linear".to_string(),
+                    field_type: FieldType::Struct("Vector3".to_string()),
+                    required: true,
+                    description: Some("Linear velocity in m/s".to_string()),
+                },
+                MessageField {
+                    name: "angular".to_string(),
+                    field_type: FieldType::Struct("Vector3".to_string()),
+                    required: true,
+                    description: Some("Angular velocity in rad/s".to_string()),
+                },
+            ],
+            version: "1.0".to_string(),
+        }
+    }
+
+    fn validate(&self) -> Result<()> {
+        // Validate linear velocity
+        if !self.linear.x.is_finite() || !self.linear.y.is_finite() || !self.linear.z.is_finite() {
+            return Err(MiniRosError::Custom(
+                "Linear velocity components must be finite".to_string(),
+            ));
+        }
+
+        // Validate angular velocity
+        if !self.angular.x.is_finite() || !self.angular.y.is_finite() || !self.angular.z.is_finite() {
+            return Err(MiniRosError::Custom(
+                "Angular velocity components must be finite".to_string(),
+            ));
+        }
+
+        // Safety limits for turtlebot-style robots
+        const MAX_LINEAR_VEL: f32 = 2.0; // 2 m/s max
+        const MAX_ANGULAR_VEL: f32 = 4.0; // 4 rad/s max
+
+        if self.linear.x.abs() > MAX_LINEAR_VEL
+            || self.linear.y.abs() > MAX_LINEAR_VEL
+            || self.linear.z.abs() > MAX_LINEAR_VEL
+        {
+            return Err(MiniRosError::Custom(format!(
+                "Linear velocity too high (max: {} m/s)",
+                MAX_LINEAR_VEL
+            )));
+        }
+
+        if self.angular.x.abs() > MAX_ANGULAR_VEL
+            || self.angular.y.abs() > MAX_ANGULAR_VEL
+            || self.angular.z.abs() > MAX_ANGULAR_VEL
+        {
+            return Err(MiniRosError::Custom(format!(
+                "Angular velocity too high (max: {} rad/s)",
+                MAX_ANGULAR_VEL
+            )));
+        }
+
+        Ok(())
+    }
+}
+
+/// Odometry message for robot pose and velocity feedback
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OdometryMessage {
+    pub pose: PoseMessage,
+    pub twist: TwistMessage,
+    pub header: Header,
+}
+
+impl MiniRosMessage for OdometryMessage {
+    fn message_type() -> &'static str {
+        "Odometry"  
+    }
+
+    fn schema() -> MessageSchema {
+        MessageSchema {
+            name: "Odometry".to_string(),
+            fields: vec![
+                MessageField {
+                    name: "pose".to_string(),
+                    field_type: FieldType::Struct("Pose".to_string()),
+                    required: true,
+                    description: Some("Robot pose (position and orientation)".to_string()),
+                },
+                MessageField {
+                    name: "twist".to_string(), 
+                    field_type: FieldType::Struct("Twist".to_string()),
+                    required: true,
+                    description: Some("Robot velocity (linear and angular)".to_string()),
+                },
+                MessageField {
+                    name: "header".to_string(),
+                    field_type: FieldType::Struct("Header".to_string()),
+                    required: true,
+                    description: Some("Message header".to_string()),
+                },
+            ],
+            version: "1.0".to_string(),
+        }
+    }
+
+    fn validate(&self) -> Result<()> {
+        // Validate pose and twist components
+        self.pose.validate()?;
+        self.twist.validate()?;
         Ok(())
     }
 }

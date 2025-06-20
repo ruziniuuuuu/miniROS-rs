@@ -42,6 +42,10 @@ image = { version = "0.24", optional = true }
 lazy_static = "1.4"
 chrono = { version = "0.4", features = ["serde"] }
 
+# Platform-specific dependencies for terminal control
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 tokio-test = "0.4"
 
@@ -100,3 +104,19 @@ path = "examples/10_cross_language_types.rs"
 [[example]]
 name = "11_minimal_benchmarks"
 path = "examples/11_minimal_benchmarks.rs"
+
+[[example]]
+name = "12_turtlebot_controller"
+path = "examples/12_turtlebot_controller.rs"
+
+[[example]]
+name = "13_turtlebot_teleop"
+path = "examples/13_turtlebot_teleop.rs"
+
+[[example]]
+name = "14_turtlebot_simulator"
+path = "examples/14_turtlebot_simulator.rs"
+
+[[example]]
+name = "15_complete_demo"
+path = "examples/15_complete_demo.rs"

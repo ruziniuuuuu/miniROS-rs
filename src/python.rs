@@ -207,6 +207,32 @@ pub struct PyPoseMessage {
     pub frame_id: String,
 }
 
+/// Python wrapper for Twist message (velocity commands)
+#[pyclass]
+#[derive(Clone)]
+pub struct PyTwistMessage {
+    #[pyo3(get, set)]
+    pub linear: [f32; 3],    // Linear velocity [x, y, z] in m/s
+    #[pyo3(get, set)]
+    pub angular: [f32; 3],   // Angular velocity [x, y, z] in rad/s
+}
+
+/// Python wrapper for Odometry message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyOdometryMessage {
+    #[pyo3(get, set)]
+    pub position: [f32; 3],      // Current position [x, y, z]
+    #[pyo3(get, set)]
+    pub orientation: [f32; 4],   // Current orientation quaternion [x, y, z, w]
+    #[pyo3(get, set)]
+    pub linear_velocity: [f32; 3],   // Current linear velocity
+    #[pyo3(get, set)]
+    pub angular_velocity: [f32; 3],  // Current angular velocity
+    #[pyo3(get, set)]
+    pub frame_id: String,
+}
+
 #[pymethods]
 impl PyPoseMessage {
     #[new]
@@ -240,6 +266,87 @@ impl PyPoseMessage {
         }
 
         Ok(true)
+    }
+}
+
+#[pymethods]
+impl PyTwistMessage {
+    #[new]
+    fn new() -> Self {
+        PyTwistMessage {
+            linear: [0.0, 0.0, 0.0],
+            angular: [0.0, 0.0, 0.0],
+        }
+    }
+
+    /// Validate velocity limits for safety
+    fn validate(&self) -> PyResult<bool> {
+        // Check for finite values
+        for &vel in &self.linear {
+            if !vel.is_finite() {
+                return Ok(false);
+            }
+        }
+        for &vel in &self.angular {
+            if !vel.is_finite() {
+                return Ok(false);
+            }
+        }
+
+        // Safety limits for turtlebot-style robots
+        const MAX_LINEAR_VEL: f32 = 2.0;  // 2 m/s max
+        const MAX_ANGULAR_VEL: f32 = 4.0; // 4 rad/s max
+
+        for &vel in &self.linear {
+            if vel.abs() > MAX_LINEAR_VEL {
+                return Ok(false);
+            }
+        }
+        for &vel in &self.angular {
+            if vel.abs() > MAX_ANGULAR_VEL {
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
+    }
+
+    /// Set linear velocity (convenience method)
+    fn set_linear(&mut self, x: f32, y: f32, z: f32) {
+        self.linear = [x, y, z];
+    }
+
+    /// Set angular velocity (convenience method)
+    fn set_angular(&mut self, x: f32, y: f32, z: f32) {
+        self.angular = [x, y, z];
+    }
+}
+
+#[pymethods]
+impl PyOdometryMessage {
+    #[new]
+    fn new() -> Self {
+        PyOdometryMessage {
+            position: [0.0, 0.0, 0.0],
+            orientation: [0.0, 0.0, 0.0, 1.0], // Unit quaternion
+            linear_velocity: [0.0, 0.0, 0.0],
+            angular_velocity: [0.0, 0.0, 0.0],
+            frame_id: "odom".to_string(),
+        }
+    }
+
+    /// Get yaw angle from quaternion (convenience method)
+    fn get_yaw(&self) -> f32 {
+        // Convert quaternion to yaw (z-axis rotation)
+        2.0 * self.orientation[2].atan2(self.orientation[3])
+    }
+
+    /// Set pose from position and yaw angle (convenience method)
+    fn set_pose_2d(&mut self, x: f32, y: f32, yaw: f32) {
+        self.position = [x, y, 0.0];
+        // Convert yaw to quaternion
+        let half_yaw = yaw / 2.0;
+        self.orientation = [0.0, 0.0, half_yaw.sin(), half_yaw.cos()];
     }
 }
 
@@ -375,11 +482,19 @@ pub fn init_python_module(m: &PyModule) -> PyResult<()> {
     m.add_class::<Logger>()?;
     m.add_class::<PyVisualizationClient>()?;
 
+    // Add new message types for turtlebot control
+    m.add_class::<PyTwistMessage>()?;
+    m.add_class::<PyOdometryMessage>()?;
+
     // Add message types as module attributes
     m.add("StringMessage", m.py().get_type::<StringMessage>())?;
     m.add("String", m.py().get_type::<StringMessage>())?; // For backward compatibility
     m.add("PoseMessage", m.py().get_type::<PyPoseMessage>())?;
     m.add("Pose", m.py().get_type::<PyPoseMessage>())?; // For backward compatibility
+    m.add("TwistMessage", m.py().get_type::<PyTwistMessage>())?;
+    m.add("Twist", m.py().get_type::<PyTwistMessage>())?; // For backward compatibility
+    m.add("OdometryMessage", m.py().get_type::<PyOdometryMessage>())?;
+    m.add("Odometry", m.py().get_type::<PyOdometryMessage>())?; // For backward compatibility
     m.add(
         "VisualizationClient",
         m.py().get_type::<PyVisualizationClient>(),
