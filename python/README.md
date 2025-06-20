@@ -1,441 +1,364 @@
-# miniROS Python Bindings
+# miniROS-rs Python Bindings
 
-**ROS2 rclpy compatible** Python API for miniROS. Core features only, maximum simplicity.
+High-performance ROS2-compatible Python bindings for miniROS-rs.
 
-## Drop-in ROS2 Replacement
+## Features
 
-Replace these imports:
-```python
-# Instead of:
-# import rclpy
-# from std_msgs.msg import String
+- **ROS2 Compatible**: Drop-in replacement for rclpy with same API
+- **High Performance**: Rust-powered backend with Python convenience
+- **Complete Message Support**: Full std_msgs, geometry_msgs, nav_msgs, sensor_msgs packages
+- **Type Safety**: Runtime validation and type checking
+- **Cross-Language**: Seamless Rust ↔ Python interoperability
+- **Zero Dependencies**: Pure Python API, no ROS2 installation required
 
-# Use:
-import mini_ros
-from mini_ros import String
-```
+## Installation
 
-Everything else stays **exactly the same**.
-
-## Quick Setup with uv
-
+### From Source
 ```bash
-# Install uv (ultra-fast Python package manager)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Install Rust (if not already installed)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Clone and build
-git clone https://github.com/ruziniuuuuu/miniROS-rs.git
-cd miniROS-rs
-
-# Build with uv (automatically installs Rust + dependencies)
-uv sync --dev
-uv run maturin develop --features python
-
-# Or use traditional method
-# pip install maturin
-# maturin develop --features python
+# Build Python bindings
+cd python/
+python -m pip install -e .
 ```
 
-## API Compatibility
+### Using pre-built wheels (coming soon)
+```bash
+pip install mini-ros-python
+```
 
-### ✅ Identical to ROS2
+## Quick Start
+
+### Basic Publishing and Subscribing
+
 ```python
-# Node lifecycle (same as rclpy)
+import mini_ros
+import time
+
+# Initialize miniROS
 mini_ros.init()
+
+# Create node
 node = mini_ros.Node('my_node')
-mini_ros.spin(node)
-node.destroy_node()
-mini_ros.shutdown()
 
-# Publisher (same as rclpy)
-pub = node.create_publisher(mini_ros.String, '/topic', 10)
-msg = mini_ros.String()
-msg.data = 'Hello!'
-pub.publish(msg)
+# Create publisher using std_msgs
+pub = node.create_publisher(mini_ros.std_msgs.String, 'chatter', 10)
 
-# Subscriber (same as rclpy)
+# Create subscriber
 def callback(msg):
-    print(f'Got: {msg.data}')
+    print(f"Received: {msg.data}")
 
-sub = node.create_subscription(mini_ros.String, '/topic', callback, 10)
+sub = node.create_subscription(mini_ros.std_msgs.String, 'chatter', callback, 10)
 
-# Services (same as rclpy)
-srv = node.create_service(mini_ros.AddTwoInts, '/add', add_callback)
-client = node.create_client(mini_ros.AddTwoInts, '/add')
-```
+# Publish messages
+for i in range(10):
+    msg = mini_ros.std_msgs.String()
+    msg.data = f"Hello World {i}"
+    pub.publish(msg)
+    time.sleep(1)
 
-## Core Examples
-
-### Minimal Publisher
-```python
-import mini_ros
-
-mini_ros.init()
-node = mini_ros.Node('publisher')
-pub = node.create_publisher(mini_ros.String, '/chat', 10)
-
-msg = mini_ros.String()
-msg.data = 'Hello miniROS!'
-pub.publish(msg)
-
+# Cleanup
 node.destroy_node()
 mini_ros.shutdown()
 ```
 
-### Minimal Subscriber
+## ROS2 Message Packages
+
+miniROS-rs provides full ROS2 message compatibility with the following packages:
+
+### std_msgs - Basic Data Types
 ```python
-import mini_ros
+# String message
+string_msg = mini_ros.std_msgs.String()
+string_msg.data = "Hello World"
 
-def callback(msg):
-    print(f'Received: {msg.data}')
+# Numeric messages
+int32_msg = mini_ros.std_msgs.Int32()
+int32_msg.data = 42
 
-mini_ros.init()
-node = mini_ros.Node('subscriber')
-sub = node.create_subscription(mini_ros.String, '/chat', callback, 10)
-mini_ros.spin(node)
+float64_msg = mini_ros.std_msgs.Float64()
+float64_msg.data = 3.14159
+
+# Boolean message
+bool_msg = mini_ros.std_msgs.Bool()
+bool_msg.data = True
+
+# Header with timestamp
+header_msg = mini_ros.std_msgs.Header()
+header_msg.frame_id = "base_link"
+header_msg.stamp_sec = int(time.time())
+header_msg.stamp_nanosec = int((time.time() % 1) * 1e9)
 ```
 
-## Message Types
+### geometry_msgs - Geometric Data Types
+```python
+# Point in 3D space
+point_msg = mini_ros.geometry_msgs.Point()
+point_msg.x = 1.0
+point_msg.y = 2.0
+point_msg.z = 3.0
+
+# Vector3 for directions/velocities
+vector_msg = mini_ros.geometry_msgs.Vector3()
+vector_msg.x = 0.5
+vector_msg.y = -0.3
+vector_msg.z = 0.8
+
+# Quaternion for orientation
+quat_msg = mini_ros.geometry_msgs.Quaternion()
+quat_msg.x = 0.0
+quat_msg.y = 0.0
+quat_msg.z = 0.707  # 90 degrees around Z-axis
+quat_msg.w = 0.707
+quat_msg.normalize()  # Ensure unit quaternion
+
+# Pose (position + orientation)
+pose_msg = mini_ros.geometry_msgs.Pose()
+pose_msg.position = point_msg
+pose_msg.orientation = quat_msg
+
+# PoseStamped (pose with timestamp)
+pose_stamped_msg = mini_ros.geometry_msgs.PoseStamped()
+pose_stamped_msg.header.frame_id = "map"
+pose_stamped_msg.pose = pose_msg
+
+# Twist (linear and angular velocity)
+twist_msg = mini_ros.geometry_msgs.Twist()
+twist_msg.linear.x = 1.0   # Forward velocity
+twist_msg.angular.z = 0.5  # Turning velocity
+
+# Validate message
+if twist_msg.validate():
+    print("Twist message is within safety limits")
+```
+
+### nav_msgs - Navigation Data Types
+```python
+# Odometry (robot state)
+odom_msg = mini_ros.nav_msgs.Odometry()
+odom_msg.header.frame_id = "odom"
+odom_msg.child_frame_id = "base_link"
+
+# Set robot pose
+odom_msg.pose.position.x = 5.0
+odom_msg.pose.position.y = 3.0
+odom_msg.pose.orientation.w = 1.0
+
+# Set robot velocity
+odom_msg.twist.linear.x = 0.5
+odom_msg.twist.angular.z = 0.1
+
+# Convenience methods
+yaw = odom_msg.get_yaw()  # Extract yaw angle
+odom_msg.set_pose_2d(10.0, 5.0, math.pi/4)  # Set 2D pose
+```
+
+### sensor_msgs - Sensor Data Types
+```python
+# Available message types (defined in package.yaml):
+# - LaserScan: Laser range finder data
+# - PointCloud2: 3D point cloud data  
+# - Imu: Inertial measurement unit data
+# - Image: Camera image data
+```
+
+## Multiple API Styles
+
+miniROS-rs supports multiple ways to access message types for maximum compatibility:
 
 ```python
-# Built-in types (like std_msgs)
-msg = mini_ros.String()
-msg.data = "hello"
+# Method 1: Package-based access (recommended for new code)
+msg1 = mini_ros.std_msgs.String()
 
-msg = mini_ros.Int32()
-msg.data = 42
+# Method 2: Direct access (legacy compatibility)
+msg2 = mini_ros.String()
 
-msg = mini_ros.Float64()
-msg.data = 3.14
+# Method 3: Legacy naming (backward compatibility)
+msg3 = mini_ros.StringMessage()
 
-msg = mini_ros.Bool()
-msg.data = True
+# All three create the same message type!
+assert type(msg1) == type(msg2) == type(msg3)
 ```
 
-## Development with uv
+## Advanced Features
 
-```bash
-# Setup development environment
-uv venv
-uv sync --dev
+### Message Validation
+```python
+# Create a twist message
+twist_msg = mini_ros.geometry_msgs.Twist()
+twist_msg.linear.x = 100.0  # Very high speed
+twist_msg.angular.z = 10.0  # Very high rotation
 
-# Build the package
-uv run maturin develop --features python
-
-# Run examples
-uv run python examples/minimal_publisher.py
-uv run python examples/minimal_subscriber.py
-
-# Run tests
-uv run pytest python/tests/
-
-# Format and lint
-uv run ruff check python/
-uv run ruff format python/
+# Validate message (checks safety limits)
+if not twist_msg.validate():
+    print("Warning: Twist command exceeds safety limits!")
 ```
+
+### Convenience Methods
+```python
+# Odometry convenience methods
+odom_msg = mini_ros.nav_msgs.Odometry()
+
+# Set 2D pose easily
+odom_msg.set_pose_2d(x=5.0, y=3.0, yaw=math.pi/2)
+
+# Extract yaw angle
+current_yaw = odom_msg.get_yaw()
+
+# Twist convenience methods
+twist_msg = mini_ros.geometry_msgs.Twist()
+twist_msg.set_linear_xyz(1.0, 0.0, 0.0)   # Set linear velocity
+twist_msg.set_angular_xyz(0.0, 0.0, 0.5)  # Set angular velocity
+```
+
+### Type Safety and Schemas
+```python
+# All message types implement schema information
+string_msg = mini_ros.std_msgs.String()
+print(f"Message type: {string_msg.message_type()}")  # "std_msgs/String"
+print(f"Schema: {string_msg.schema()}")              # Field definitions
+
+# Runtime type checking
+pose_msg = mini_ros.geometry_msgs.Pose()
+if pose_msg.validate():
+    print("Pose message is valid")
+```
+
+## Performance
+
+miniROS-rs Python bindings provide excellent performance:
+
+- **Fast serialization**: Binary encoding with bincode
+- **Zero-copy**: Direct memory access where possible  
+- **Low latency**: Rust backend eliminates Python overhead
+- **High throughput**: Optimized for real-time robotics applications
 
 ## Examples
 
-### Run Examples
+### Basic Talker/Listener
 ```bash
-cd python/examples
+# Terminal 1: Start talker
+python examples/talker.py
 
-# Using uv (recommended)
-uv run python minimal_publisher.py    # Terminal 1
-uv run python minimal_subscriber.py   # Terminal 2
-
-# Or traditional Python
-python minimal_publisher.py
-python minimal_subscriber.py
+# Terminal 2: Start listener  
+python examples/listener.py
 ```
 
-### Available Examples
-- `minimal_publisher.py` - Basic publisher (15 lines)
-- `minimal_subscriber.py` - Basic subscriber (15 lines)  
-- `talker.py` - Publisher with logging
-- `listener.py` - Subscriber with logging
-
-## Development Benefits
-
-- **Fast iteration** - Quick build and test cycles
-- **Simple deployment** - Single binary with dependencies
-- **Cross-platform** - Works on Linux, macOS, Windows
-- **Memory efficient** - Suitable for resource-constrained systems
-
-## What's Missing
-
-### ❌ Not Implemented (yet)
-- Custom message definitions
-- Advanced QoS policies
-- Timers and lifecycle nodes
-- Parameter callbacks
-- tf2 transformations
-
-### 🚧 Roadmap
-- [ ] More std_msgs types
-- [ ] Custom message support
-- [ ] Timer system
-- [ ] QoS policies
-
-## When to Use
-
-### ✅ Perfect for:
-- **Learning ROS concepts** - Same API, less complexity
-- **Simple robots** - Pub/sub + services
-- **Performance critical** - Embedded systems
-- **Prototyping** - Fast iteration with uv
-
-### ❌ Use ROS2 for:
-- **Complex systems** - Navigation, perception
-- **Custom messages** - Complex data types
-- **Large teams** - Established workflows
-- **ROS ecosystem** - rviz, Gazebo, etc.
-
-## Build System
-
-miniROS uses:
-- **uv** for Python package management (10-100x faster than pip)
-- **maturin** for Rust-Python bindings
-- **Cargo** for Rust compilation
-
-This provides the fastest possible build and install experience.
-
----
-
-*miniROS Python: ROS2 compatibility, minimal complexity, maximum speed* 
-
-## 🚀 Quick Start
-
-### Installation
-
+### ROS2 Message Demo
 ```bash
-# Build and install Python bindings
-cd python
-make install
+# Comprehensive demo of all message types
+python examples/ros2_message_demo.py
 ```
 
-### Basic Usage
-
+### Robot Control Example
 ```python
 import mini_ros
+import time
 
-# Initialize (same as rclpy.init())
 mini_ros.init()
+node = mini_ros.Node('robot_controller')
 
-# Create node (same as rclpy.create_node())
-node = mini_ros.Node('my_node')
+# Create publishers
+cmd_vel_pub = node.create_publisher(mini_ros.geometry_msgs.Twist, 'cmd_vel', 10)
+odom_pub = node.create_publisher(mini_ros.nav_msgs.Odometry, 'odom', 10)
 
-# Create publisher (same as node.create_publisher())
-pub = node.create_publisher(mini_ros.StringMessage, 'topic', 10)
+# Create subscriber for pose updates
+def pose_callback(msg):
+    print(f"Robot at: ({msg.pose.position.x:.2f}, {msg.pose.position.y:.2f})")
 
-# Create subscriber (same as node.create_subscription())
-def callback(msg):
-    print(f'Received: {msg.data}')
+pose_sub = node.create_subscription(
+    mini_ros.geometry_msgs.PoseStamped, 'robot_pose', pose_callback, 10
+)
 
-sub = node.create_subscription(mini_ros.StringMessage, 'topic', callback, 10)
+# Control loop
+for i in range(100):
+    # Send velocity command
+    twist_msg = mini_ros.geometry_msgs.Twist()
+    twist_msg.linear.x = 0.5  # Move forward
+    twist_msg.angular.z = 0.1  # Turn slightly
+    cmd_vel_pub.publish(twist_msg)
+    
+    # Publish odometry
+    odom_msg = mini_ros.nav_msgs.Odometry()
+    odom_msg.header.frame_id = "odom"
+    odom_msg.child_frame_id = "base_link"
+    odom_msg.set_pose_2d(i * 0.1, 0.0, i * 0.01)  # Simulate movement
+    odom_pub.publish(odom_msg)
+    
+    time.sleep(0.1)
 
-# Publish message
-msg = mini_ros.StringMessage()
-msg.data = "Hello, miniROS!"
-pub.publish(msg)
-
-# Cleanup (same as rclpy.shutdown())
+node.destroy_node()
 mini_ros.shutdown()
 ```
 
-## 🧪 Testing
-
-We provide a comprehensive pytest test suite that automatically validates all Python API functionality.
-
-### Running Tests
-
-```bash
-# Run all tests
-make test
-
-# Run only fast tests (skip integration/performance)
-make test-fast
-
-# Run integration tests (tests actual examples)
-make test-integration
-
-# Run performance tests
-make test-performance
-
-# Generate coverage report
-make coverage
-```
-
-### Test Categories
-
-#### 1. **Basic Functionality Tests** (`test_basic_functionality.py`)
-- ✅ Initialization and shutdown
-- ✅ Node creation and management
-- ✅ Message types and manipulation
-- ✅ Publisher/subscriber creation
-- ✅ End-to-end pub/sub communication
-- ✅ Multiple subscribers and topics
-- ✅ Error handling and edge cases
-- ✅ Performance and concurrency tests
-
-#### 2. **Example Integration Tests** (`test_examples.py`)
-- ✅ Validates all example scripts run correctly
-- ✅ Checks output and behavior
-- ✅ Ensures ROS2 compatibility patterns
-- ✅ Validates "mini" philosophy (concise code)
-
-### Test Results Summary
-
-Latest test run: **28 passed, 1 skipped** ✅
-
-```
-tests/test_basic_functionality.py ........s...........  [68%]
-tests/test_examples.py .........                      [100%]
-```
-
-### Available Test Commands
-
-```bash
-# Development workflow
-make dev-install    # Install with test dependencies
-make test          # Run all tests
-make quick-test    # Run only basic functionality tests
-make clean         # Clean up test artifacts
-
-# Specific test categories
-pytest tests/test_basic_functionality.py  # Core API tests
-pytest tests/test_examples.py            # Example validation
-pytest -m "not slow"                     # Skip performance tests
-pytest -m integration                    # Integration tests only
-```
-
-## 📁 Project Structure
-
-```
-python/
-├── examples/               # Python examples (ROS2 compatible)
-│   ├── minimal_publisher.py
-│   ├── minimal_subscriber.py
-│   └── simple_pubsub.py
-├── tests/                  # Comprehensive test suite
-│   ├── conftest.py        # Pytest configuration
-│   ├── test_basic_functionality.py  # Core API tests
-│   └── test_examples.py   # Example validation tests
-├── pyproject.toml         # Package configuration with pytest setup
-├── Makefile              # Development commands
-└── README.md             # This file
-```
-
-## 🔧 Development Workflow
-
-### Standard Development Cycle
-
-```bash
-# 1. Install development environment
-make dev-install
-
-# 2. Make changes to code
-
-# 3. Run tests to validate
-make test
-
-# 4. Quick iteration (faster)
-make quick-test
-```
-
-### Testing Philosophy
-
-Our test suite follows the "mini" philosophy:
-
-- **Comprehensive**: Tests all core functionality
-- **Fast**: Most tests complete in milliseconds
-- **Reliable**: No flaky tests or race conditions  
-- **Clear**: Descriptive test names and error messages
-- **Automated**: Replaces manual example testing
-
-### Test Fixtures
-
-We provide helpful pytest fixtures:
+## Visualization Support
 
 ```python
-def test_my_feature(mini_ros_context, test_node, message_factory):
-    # mini_ros_context: Clean miniROS environment
-    # test_node: Unique test node
-    # message_factory: Helper for creating messages
-    
-    msg = message_factory.string("test data")
-    # ... your test code
+# Create visualization client
+viz = mini_ros.VisualizationClient("robot_demo", spawn_viewer=True)
+
+# Log robot trajectory
+points = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]
+viz.log_points("trajectory", points)
+
+# Log robot pose
+viz.log_transform("robot", [1.0, 2.0, 0.0], [0.0, 0.0, 0.0, 1.0])
+
+# Log scalar data
+viz.log_scalar("speed", 1.5)
 ```
 
-## 🎯 ROS2 Compatibility
+## Migration from ROS2
 
-The Python API maintains full compatibility with ROS2 rclpy patterns:
+miniROS-rs provides a drop-in replacement for common rclpy patterns:
 
-| miniROS | ROS2 rclpy |
-|---------|------------|
-| `mini_ros.init()` | `rclpy.init()` |
-| `mini_ros.Node('name')` | `rclpy.create_node('name')` |
-| `node.create_publisher()` | `node.create_publisher()` |
-| `node.create_subscription()` | `node.create_subscription()` |
-| `mini_ros.shutdown()` | `rclpy.shutdown()` |
+```python
+# ROS2 rclpy code:
+# import rclpy
+# from std_msgs.msg import String
+# from geometry_msgs.msg import Twist
 
-## 📊 Performance
+# miniROS-rs equivalent:
+import mini_ros
+# Message types are built-in: mini_ros.std_msgs.String, mini_ros.geometry_msgs.Twist
 
-Our memory-based message broker provides significant performance improvements:
+# Same API patterns work:
+mini_ros.init()  # instead of rclpy.init()
+node = mini_ros.Node('my_node')  # same as rclpy
+# ... rest of the API is identical
+```
 
-- **4x faster** message passing than TCP transport
-- **Zero network overhead** for local communication
-- **Sub-millisecond** message delivery
-- **Concurrent safe** multi-node operation
+## Troubleshooting
 
-## 🛠️ Troubleshooting
+### Import Errors
+If you get import errors, ensure the Rust bindings are built:
+```bash
+cd python/
+python -m pip install -e .
+```
 
-### Common Issues
+### Performance Issues
+For maximum performance:
+- Use binary message serialization (enabled by default)
+- Avoid excessive message validation calls
+- Use batch publishing for high-throughput scenarios
 
-1. **Import Error**: Ensure you've built the Rust bindings first
-   ```bash
-   cd .. && maturin develop --features python
-   ```
+### Compatibility Issues
+- Use package-based message access for new code: `mini_ros.std_msgs.String()`
+- Legacy access still works: `mini_ros.StringMessage()`
+- All ROS2 message field names and types are identical
 
-2. **Test Failures**: Make sure you have development dependencies
-   ```bash
-   make dev-install
-   ```
+## Documentation
 
-3. **Permission Issues**: Use virtual environment or user install
-   ```bash
-   pip install --user -e ".[dev]"
-   ```
+- [API Reference](https://docs.rs/mini-ros)
+- [Message Type Reference](../packages/)
+- [Rust Documentation](https://docs.rs/mini-ros/latest/mini_ros/)
 
-### Getting Help
+## Contributing
 
-- Run `make help` for available commands
-- Check test output for detailed error messages
-- Verify examples work: `make run-examples`
+See the main project [CONTRIBUTING.md](../CONTRIBUTING.md) for development guidelines.
 
-## 📈 Test Coverage
+## License
 
-Current test coverage includes:
-
-- ✅ **Initialization**: Context management and lifecycle
-- ✅ **Node Management**: Creation, naming, cleanup
-- ✅ **Messaging**: All message types and serialization
-- ✅ **Pub/Sub**: Communication patterns and reliability
-- ✅ **Concurrency**: Multi-node and threading safety
-- ✅ **Error Handling**: Edge cases and failure modes
-- ✅ **Examples**: All example scripts validated
-- ✅ **Performance**: High-frequency and stress tests
-
-## 🚧 Future Testing
-
-Planned test additions:
-
-- [ ] Service client/server tests
-- [ ] Action client/server tests  
-- [ ] Parameter system tests
-- [ ] Visualization integration tests
-- [ ] Cross-language Rust↔Python tests
-
----
-
-**Note**: This testing infrastructure ensures that the Python API remains stable and reliable as the project evolves. Every commit is validated against this comprehensive test suite. 
+This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details. 
