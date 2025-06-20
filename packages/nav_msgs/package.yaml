@@ -1,0 +1,67 @@
+name: nav_msgs
+version: "1.0.0"
+description: "Navigation message definitions for miniROS - compatible with ROS2 nav_msgs"
+author: "miniROS Team"
+license: "MIT OR Apache-2.0"
+dependencies: ["std_msgs", "geometry_msgs"]
+python_support: true
+message_package: true
+
+messages:
+  Odometry:
+    description: "Navigation odometry data"
+    fields:
+      - name: "header"
+        type: "std_msgs/Header"
+        description: "Header with timestamp and frame info"
+      - name: "child_frame_id"
+        type: "string"
+        description: "Frame id of the child frame (usually base_link)"
+      - name: "pose"
+        type: "geometry_msgs/PoseWithCovariance"
+        description: "Pose of the robot with uncertainty"
+      - name: "twist"
+        type: "geometry_msgs/TwistWithCovariance"
+        description: "Velocity of the robot with uncertainty"
+  
+  Path:
+    description: "Navigation path as a sequence of poses"
+    fields:
+      - name: "header"
+        type: "std_msgs/Header"
+        description: "Header with timestamp and frame info"
+      - name: "poses"
+        type: "geometry_msgs/PoseStamped[]"
+        description: "Path as sequence of poses"
+  
+  OccupancyGrid:
+    description: "2D occupancy grid map"
+    fields:
+      - name: "header"
+        type: "std_msgs/Header"
+        description: "Header with timestamp and frame info"
+      - name: "info"
+        type: "MapMetaData"
+        description: "Meta-information about the grid"
+      - name: "data"
+        type: "int8[]"
+        description: "Grid data (-1=unknown, 0=free, 100=occupied)"
+  
+  MapMetaData:
+    description: "Meta-information about an occupancy grid map"
+    fields:
+      - name: "map_load_time"
+        type: "int64"
+        description: "Time when the map was loaded"
+      - name: "resolution"
+        type: "float32"
+        description: "Map resolution [m/cell]"
+      - name: "width"
+        type: "uint32"
+        description: "Map width [cells]" 
+      - name: "height"
+        type: "uint32"
+        description: "Map height [cells]"
+      - name: "origin"
+        type: "geometry_msgs/Pose"
+        description: "Origin of the map [m, rad]" 

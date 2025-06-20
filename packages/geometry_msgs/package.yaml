@@ -1,0 +1,147 @@
+name: geometry_msgs
+version: "1.0.0"
+description: "Geometric message definitions for miniROS - compatible with ROS2 geometry_msgs"
+author: "miniROS Team"
+license: "MIT OR Apache-2.0"
+dependencies: ["std_msgs"]
+python_support: true
+message_package: true
+
+messages:
+  Point:
+    description: "A representation of position in free space"
+    fields:
+      - name: "x"
+        type: "float64"
+        description: "X coordinate"
+      - name: "y"
+        type: "float64"
+        description: "Y coordinate"
+      - name: "z"
+        type: "float64"
+        description: "Z coordinate"
+  
+  Point32:
+    description: "A representation of position in free space (32-bit precision)"
+    fields:
+      - name: "x"
+        type: "float32"
+        description: "X coordinate"
+      - name: "y"
+        type: "float32"
+        description: "Y coordinate"
+      - name: "z"
+        type: "float32"
+        description: "Z coordinate"
+  
+  Vector3:
+    description: "A representation of a vector in free space"
+    fields:
+      - name: "x"
+        type: "float64"
+        description: "X component"
+      - name: "y"
+        type: "float64"
+        description: "Y component"
+      - name: "z"
+        type: "float64"
+        description: "Z component"
+  
+  Quaternion:
+    description: "A representation of orientation in free space using quaternion"
+    fields:
+      - name: "x"
+        type: "float64"
+        description: "X component of quaternion"
+      - name: "y"
+        type: "float64"
+        description: "Y component of quaternion"
+      - name: "z"
+        type: "float64"
+        description: "Z component of quaternion"
+      - name: "w"
+        type: "float64"
+        description: "W component of quaternion"
+  
+  Pose:
+    description: "A representation of pose (position and orientation) in free space"
+    fields:
+      - name: "position"
+        type: "Point"
+        description: "Position component"
+      - name: "orientation"
+        type: "Quaternion"
+        description: "Orientation component"
+  
+  PoseStamped:
+    description: "A pose representation with reference coordinate frame and timestamp"
+    fields:
+      - name: "header"
+        type: "std_msgs/Header"
+        description: "Header with timestamp and frame info"
+      - name: "pose"
+        type: "Pose"
+        description: "Pose in the specified frame"
+  
+  PoseWithCovariance:
+    description: "Pose with uncertainty information"
+    fields:
+      - name: "pose"
+        type: "Pose"
+        description: "Pose estimate"
+      - name: "covariance"
+        type: "float64[36]"
+        description: "Row-major representation of 6x6 covariance matrix"
+  
+  Twist:
+    description: "A representation of velocity in free space broken into linear and angular parts"
+    fields:
+      - name: "linear"
+        type: "Vector3"
+        description: "Linear velocity (m/s)"
+      - name: "angular"
+        type: "Vector3"
+        description: "Angular velocity (rad/s)"
+  
+  TwistStamped:
+    description: "A twist representation with reference coordinate frame and timestamp"
+    fields:
+      - name: "header"
+        type: "std_msgs/Header"
+        description: "Header with timestamp and frame info"
+      - name: "twist"
+        type: "Twist"
+        description: "Twist in the specified frame"
+  
+  TwistWithCovariance:
+    description: "Twist with uncertainty information"
+    fields:
+      - name: "twist"
+        type: "Twist"
+        description: "Velocity estimate"
+      - name: "covariance"
+        type: "float64[36]"
+        description: "Row-major representation of 6x6 covariance matrix"
+  
+  Transform:
+    description: "A representation of a transform between coordinate frames"
+    fields:
+      - name: "translation"
+        type: "Vector3"
+        description: "Translation component"
+      - name: "rotation"
+        type: "Quaternion"
+        description: "Rotation component"
+  
+  TransformStamped:
+    description: "A transform representation with reference coordinate frame and timestamp"
+    fields:
+      - name: "header"
+        type: "std_msgs/Header"
+        description: "Header with timestamp and frame info"
+      - name: "child_frame_id"
+        type: "string"
+        description: "Frame id of the child frame"
+      - name: "transform"
+        type: "Transform"
+        description: "Transform from header frame to child frame" 

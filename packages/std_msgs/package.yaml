@@ -1,0 +1,65 @@
+name: std_msgs
+version: "1.0.0"
+description: "Standard message definitions for miniROS - compatible with ROS2 std_msgs"
+author: "miniROS Team"
+license: "MIT OR Apache-2.0"
+dependencies: []
+python_support: true
+message_package: true
+
+messages:
+  String:
+    description: "String primitive message type"
+    fields:
+      - name: "data"
+        type: "string"
+        description: "String data content"
+  
+  Int32:
+    description: "32-bit signed integer message type"
+    fields:
+      - name: "data"
+        type: "int32"
+        description: "Integer data content"
+  
+  Int64:
+    description: "64-bit signed integer message type"
+    fields:
+      - name: "data"
+        type: "int64"
+        description: "Long integer data content"
+  
+  Float32:
+    description: "32-bit floating point message type"
+    fields:
+      - name: "data"
+        type: "float32"
+        description: "Float data content"
+  
+  Float64:
+    description: "64-bit floating point message type"
+    fields:
+      - name: "data"
+        type: "float64"
+        description: "Double precision float data content"
+  
+  Bool:
+    description: "Boolean message type"
+    fields:
+      - name: "data"
+        type: "bool"
+        description: "Boolean data content"
+  
+  Empty:
+    description: "Empty message type for triggers and events"
+    fields: []
+  
+  Header:
+    description: "Standard metadata for higher-level stamped data types"
+    fields:
+      - name: "stamp"
+        type: "int64"
+        description: "Timestamp in nanoseconds since Unix epoch"
+      - name: "frame_id"
+        type: "string"
+        description: "Frame ID for coordinate system reference" 
