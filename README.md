@@ -25,7 +25,14 @@ A **lightweight, high-performance** ROS2-compatible middleware implementation in
 - **Multi-Transport** - DDS, TCP, UDP, and in-memory transport options
 - **Python Bindings** - ROS2 rclpy-compatible API for easy migration
 
-### New: Launch & Package System
+### New: ROS2-Compatible Message Packages 📦
+- **std_msgs** - Standard primitive types (String, Int32, Float64, Bool, Header)
+- **geometry_msgs** - Geometric types (Point, Pose, Twist, Quaternion, etc.)
+- **nav_msgs** - Navigation types (Odometry, Path, OccupancyGrid)
+- **sensor_msgs** - Sensor types (LaserScan, PointCloud2, Image, IMU)
+- **Full ROS2 Compatibility** - Drop-in replacement for ROS2 message types
+
+### Package & Launch System
 - **Package Management** - Organize code into reusable packages with manifests
 - **Launch System** - ROS2-like launch files for multi-node orchestration
 - **CLI Tools** - `mini_ros` command-line interface for easy package operations
@@ -35,9 +42,10 @@ A **lightweight, high-performance** ROS2-compatible middleware implementation in
 
 ### 💻 API Overview
 
-#### Rust API
+#### Rust API - ROS2 Compatible Messages
 ```rust
 use mini_ros::prelude::*;
+use mini_ros::types::{std_msgs, geometry_msgs, nav_msgs};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -45,13 +53,27 @@ async fn main() -> Result<()> {
     let mut node = Node::new("my_node")?;
     node.init().await?;
 
-    // Publisher
-    let pub = node.create_publisher::<StringMsg>("/topic").await?;
-    pub.publish(&StringMsg { data: "Hello!".into() }).await?;
+    // Publisher with ROS2-compatible message
+    let pub = node.create_publisher::<std_msgs::String>("/topic").await?;
+    let msg = std_msgs::String { data: "Hello ROS2!".to_string() };
+    pub.publish(&msg).await?;
 
-    // Subscriber with callback
-    let sub = node.create_subscriber::<StringMsg>("/topic").await?;
-    sub.on_message(|msg| println!("Received: {}", msg.data))?;
+    // Geometry messages for robotics
+    let twist = geometry_msgs::Twist {
+        linear: geometry_msgs::Vector3 { x: 0.5, y: 0.0, z: 0.0 },
+        angular: geometry_msgs::Vector3 { x: 0.0, y: 0.0, z: 1.0 },
+    };
+
+    // Navigation messages
+    let odom = nav_msgs::Odometry {
+        header: std_msgs::Header { 
+            stamp: get_current_time_ns(),
+            frame_id: "odom".to_string() 
+        },
+        child_frame_id: "base_link".to_string(),
+        pose: geometry_msgs::PoseWithCovariance { /* ... */ },
+        twist: geometry_msgs::TwistWithCovariance { /* ... */ },
+    };
 
     Ok(())
 }
@@ -67,19 +89,23 @@ mini_ros.init()
 # Create node (same as rclpy.create_node())
 node = mini_ros.Node('my_node')
 
-# Publisher (same as node.create_publisher())
-pub = node.create_publisher(mini_ros.StringMessage, 'topic', 10)
+# Publisher with ROS2-compatible messages (same API as rclpy)
+pub = node.create_publisher(mini_ros.std_msgs.String, 'topic', 10)
 
-# Subscriber (same as node.create_subscription())
-def callback(msg):
-    print(f'Received: {msg.data}')
-
-sub = node.create_subscription(mini_ros.StringMessage, 'topic', callback, 10)
-
-# Publish message
-msg = mini_ros.StringMessage()
+# Standard ROS2 message types
+msg = mini_ros.std_msgs.String()
 msg.data = 'Hello miniROS!'
 pub.publish(msg)
+
+# Geometry messages for robot control
+twist = mini_ros.geometry_msgs.Twist()
+twist.linear.x = 0.5
+twist.angular.z = 1.0
+
+# Navigation messages
+odom = mini_ros.nav_msgs.Odometry()
+odom.header.frame_id = "odom"
+odom.child_frame_id = "base_link"
 
 # Cleanup (same as rclpy.shutdown())
 mini_ros.shutdown()
@@ -155,6 +181,9 @@ cargo run --example 02_custom_messages
 
 # Service communication
 cargo run --example 03_services
+
+# ROS2-compatible message packages (NEW!)
+cargo run --example 16_message_packages_demo
 
 # Visualization with Rerun
 cargo run --example 04_visualization_basic --features visualization
