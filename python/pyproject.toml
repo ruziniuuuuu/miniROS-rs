@@ -20,6 +20,10 @@ classifiers = [
 # No runtime dependencies - keep it minimal
 dependencies = []
 
+# CLI entry points - using different name to avoid conflicts
+[project.scripts]
+mini_ros_py = "mini_ros.cli:main"
+
 [project.optional-dependencies]
 # Development dependencies for testing
 dev = [
@@ -30,6 +34,11 @@ dev = [
 ]
 # Examples have no extra dependencies
 examples = []
+
+# CLI dependencies for shell completions (optional)
+cli = [
+    "argcomplete>=2.0",  # For bash/zsh completions
+]
 
 [project.urls]
 Homepage = "https://github.com/ruziniuuuuu/miniROS-rs"
