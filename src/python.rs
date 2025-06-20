@@ -112,30 +112,38 @@ impl Publisher {
     /// Publish a message
     fn publish(&self, data: PyObject) -> PyResult<()> {
         Python::with_gil(|py| {
-            // Try to extract as StringMessage first
-            if let Ok(string_msg) = data.extract::<StringMessage>(py) {
-                println!(
-                    "Publishing StringMessage to {}: {}",
-                    self.topic, string_msg.data
-                );
-                Ok(())
+            // Try to extract different message types
+            if let Ok(string_msg) = data.extract::<PyStringMessage>(py) {
+                println!("Publishing String to {}: {}", self.topic, string_msg.data);
             }
-            // Try to extract as a plain string
+            else if let Ok(int32_msg) = data.extract::<PyInt32Message>(py) {
+                println!("Publishing Int32 to {}: {}", self.topic, int32_msg.data);
+            }
+            else if let Ok(float64_msg) = data.extract::<PyFloat64Message>(py) {
+                println!("Publishing Float64 to {}: {}", self.topic, float64_msg.data);
+            }
+            else if let Ok(bool_msg) = data.extract::<PyBoolMessage>(py) {
+                println!("Publishing Bool to {}: {}", self.topic, bool_msg.data);
+            }
+            else if let Ok(pose_msg) = data.extract::<PyPoseMessage>(py) {
+                println!("Publishing Pose to {}: pos=[{}, {}, {}]", 
+                    self.topic, pose_msg.position.x, pose_msg.position.y, pose_msg.position.z);
+            }
+            else if let Ok(twist_msg) = data.extract::<PyTwistMessage>(py) {
+                println!("Publishing Twist to {}: linear=[{}, {}, {}]", 
+                    self.topic, twist_msg.linear.x, twist_msg.linear.y, twist_msg.linear.z);
+            }
+            else if let Ok(odometry_msg) = data.extract::<PyOdometryMessage>(py) {
+                println!("Publishing Odometry to {}: frame_id={}", 
+                    self.topic, odometry_msg.header.frame_id);
+            }
             else if let Ok(string_data) = data.extract::<String>(py) {
                 println!("Publishing String to {}: {}", self.topic, string_data);
-                Ok(())
             }
-            // Try other basic types
-            else if let Ok(int_data) = data.extract::<i32>(py) {
-                println!("Publishing Int32 to {}: {}", self.topic, int_data);
-                Ok(())
-            } else if let Ok(float_data) = data.extract::<f64>(py) {
-                println!("Publishing Float64 to {}: {}", self.topic, float_data);
-                Ok(())
-            } else {
+            else {
                 println!("Publishing unknown type to {}: {:?}", self.topic, data);
-                Ok(())
             }
+            Ok(())
         })
     }
 
@@ -169,7 +177,7 @@ impl Subscription {
     fn _simulate_message(&self, data: String) -> PyResult<()> {
         if let Some(ref callback) = self.callback {
             Python::with_gil(|py| {
-                let py_msg = StringMessage::new(data);
+                let py_msg = PyStringMessage::new(data);
                 if let Err(e) = callback.call1(py, (py_msg,)) {
                     eprintln!("Error calling Python callback: {}", e);
                 }
@@ -179,19 +187,209 @@ impl Subscription {
     }
 }
 
-/// Python message types
+// =============================================================================
+// Python Message Types - std_msgs
+// =============================================================================
+
+/// Python wrapper for String message
 #[pyclass]
 #[derive(Clone)]
-pub struct StringMessage {
+pub struct PyStringMessage {
     #[pyo3(get, set)]
     pub data: String,
 }
 
 #[pymethods]
-impl StringMessage {
+impl PyStringMessage {
     #[new]
+    #[pyo3(signature = (data = String::new()))]
     fn new(data: String) -> Self {
-        StringMessage { data }
+        PyStringMessage { data }
+    }
+}
+
+/// Python wrapper for Int32 message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyInt32Message {
+    #[pyo3(get, set)]
+    pub data: i32,
+}
+
+#[pymethods]
+impl PyInt32Message {
+    #[new]
+    #[pyo3(signature = (data = 0))]
+    fn new(data: i32) -> Self {
+        PyInt32Message { data }
+    }
+}
+
+/// Python wrapper for Int64 message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyInt64Message {
+    #[pyo3(get, set)]
+    pub data: i64,
+}
+
+#[pymethods]
+impl PyInt64Message {
+    #[new]
+    #[pyo3(signature = (data = 0))]
+    fn new(data: i64) -> Self {
+        PyInt64Message { data }
+    }
+}
+
+/// Python wrapper for Float32 message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyFloat32Message {
+    #[pyo3(get, set)]
+    pub data: f32,
+}
+
+#[pymethods]
+impl PyFloat32Message {
+    #[new]
+    #[pyo3(signature = (data = 0.0))]
+    fn new(data: f32) -> Self {
+        PyFloat32Message { data }
+    }
+}
+
+/// Python wrapper for Float64 message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyFloat64Message {
+    #[pyo3(get, set)]
+    pub data: f64,
+}
+
+#[pymethods]
+impl PyFloat64Message {
+    #[new]
+    #[pyo3(signature = (data = 0.0))]
+    fn new(data: f64) -> Self {
+        PyFloat64Message { data }
+    }
+}
+
+/// Python wrapper for Bool message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyBoolMessage {
+    #[pyo3(get, set)]
+    pub data: bool,
+}
+
+#[pymethods]
+impl PyBoolMessage {
+    #[new]
+    #[pyo3(signature = (data = false))]
+    fn new(data: bool) -> Self {
+        PyBoolMessage { data }
+    }
+}
+
+/// Python wrapper for Header message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyHeaderMessage {
+    #[pyo3(get, set)]
+    pub stamp_sec: u32,
+    #[pyo3(get, set)]
+    pub stamp_nanosec: u32,
+    #[pyo3(get, set)]
+    pub frame_id: String,
+}
+
+#[pymethods]
+impl PyHeaderMessage {
+    #[new]
+    fn new() -> Self {
+        PyHeaderMessage {
+            stamp_sec: 0,
+            stamp_nanosec: 0,
+            frame_id: String::new(),
+        }
+    }
+}
+
+// =============================================================================
+// Python Message Types - geometry_msgs
+// =============================================================================
+
+/// Python wrapper for Point message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyPointMessage {
+    #[pyo3(get, set)]
+    pub x: f64,
+    #[pyo3(get, set)]
+    pub y: f64,
+    #[pyo3(get, set)]
+    pub z: f64,
+}
+
+#[pymethods]
+impl PyPointMessage {
+    #[new]
+    fn new() -> Self {
+        PyPointMessage { x: 0.0, y: 0.0, z: 0.0 }
+    }
+}
+
+/// Python wrapper for Vector3 message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyVector3Message {
+    #[pyo3(get, set)]
+    pub x: f64,
+    #[pyo3(get, set)]
+    pub y: f64,
+    #[pyo3(get, set)]
+    pub z: f64,
+}
+
+#[pymethods]
+impl PyVector3Message {
+    #[new]
+    fn new() -> Self {
+        PyVector3Message { x: 0.0, y: 0.0, z: 0.0 }
+    }
+}
+
+/// Python wrapper for Quaternion message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyQuaternionMessage {
+    #[pyo3(get, set)]
+    pub x: f64,
+    #[pyo3(get, set)]
+    pub y: f64,
+    #[pyo3(get, set)]
+    pub z: f64,
+    #[pyo3(get, set)]
+    pub w: f64,
+}
+
+#[pymethods]
+impl PyQuaternionMessage {
+    #[new]
+    fn new() -> Self {
+        PyQuaternionMessage { x: 0.0, y: 0.0, z: 0.0, w: 1.0 }
+    }
+    
+    fn normalize(&mut self) {
+        let norm = (self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w).sqrt();
+        if norm > 0.0 {
+            self.x /= norm;
+            self.y /= norm;
+            self.z /= norm;
+            self.w /= norm;
+        }
     }
 }
 
@@ -200,35 +398,9 @@ impl StringMessage {
 #[derive(Clone)]
 pub struct PyPoseMessage {
     #[pyo3(get, set)]
-    pub position: [f32; 3],
+    pub position: PyPointMessage,
     #[pyo3(get, set)]
-    pub orientation: [f32; 4],
-    #[pyo3(get, set)]
-    pub frame_id: String,
-}
-
-/// Python wrapper for Twist message (velocity commands)
-#[pyclass]
-#[derive(Clone)]
-pub struct PyTwistMessage {
-    pub linear: [f32; 3],  // Linear velocity [x, y, z] in m/s
-    pub angular: [f32; 3], // Angular velocity [x, y, z] in rad/s
-}
-
-/// Python wrapper for Odometry message
-#[pyclass]
-#[derive(Clone)]
-pub struct PyOdometryMessage {
-    #[pyo3(get, set)]
-    pub position: [f32; 3], // Current position [x, y, z]
-    #[pyo3(get, set)]
-    pub orientation: [f32; 4], // Current orientation quaternion [x, y, z, w]
-    #[pyo3(get, set)]
-    pub linear_velocity: [f32; 3], // Current linear velocity
-    #[pyo3(get, set)]
-    pub angular_velocity: [f32; 3], // Current angular velocity
-    #[pyo3(get, set)]
-    pub frame_id: String,
+    pub orientation: PyQuaternionMessage,
 }
 
 #[pymethods]
@@ -236,35 +408,50 @@ impl PyPoseMessage {
     #[new]
     fn new() -> Self {
         PyPoseMessage {
-            position: [0.0, 0.0, 0.0],
-            orientation: [0.0, 0.0, 0.0, 1.0], // Unit quaternion
-            frame_id: "".to_string(),
+            position: PyPointMessage::new(),
+            orientation: PyQuaternionMessage::new(),
         }
     }
-
-    /// Validate the pose (especially quaternion normalization)
+    
     fn validate(&self) -> PyResult<bool> {
-        // Check position for finite values
-        for &coord in &self.position {
-            if !coord.is_finite() {
-                return Ok(false);
-            }
-        }
-
-        // Check quaternion normalization
-        let norm = (self.orientation[0].powi(2)
-            + self.orientation[1].powi(2)
-            + self.orientation[2].powi(2)
-            + self.orientation[3].powi(2))
-        .sqrt();
-
-        if (norm - 1.0).abs() > 0.1 {
-            // Allow some tolerance
-            return Ok(false);
-        }
-
-        Ok(true)
+        // Check if quaternion is normalized
+        let norm = (self.orientation.x * self.orientation.x + 
+                   self.orientation.y * self.orientation.y + 
+                   self.orientation.z * self.orientation.z + 
+                   self.orientation.w * self.orientation.w).sqrt();
+        Ok((norm - 1.0).abs() < 1e-6)
     }
+}
+
+/// Python wrapper for PoseStamped message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyPoseStampedMessage {
+    #[pyo3(get, set)]
+    pub header: PyHeaderMessage,
+    #[pyo3(get, set)]
+    pub pose: PyPoseMessage,
+}
+
+#[pymethods]
+impl PyPoseStampedMessage {
+    #[new]
+    fn new() -> Self {
+        PyPoseStampedMessage {
+            header: PyHeaderMessage::new(),
+            pose: PyPoseMessage::new(),
+        }
+    }
+}
+
+/// Python wrapper for Twist message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyTwistMessage {
+    #[pyo3(get, set)]
+    pub linear: PyVector3Message,
+    #[pyo3(get, set)]
+    pub angular: PyVector3Message,
 }
 
 #[pymethods]
@@ -272,76 +459,55 @@ impl PyTwistMessage {
     #[new]
     fn new() -> Self {
         PyTwistMessage {
-            linear: [0.0, 0.0, 0.0],
-            angular: [0.0, 0.0, 0.0],
+            linear: PyVector3Message::new(),
+            angular: PyVector3Message::new(),
         }
     }
-
-    /// Validate velocity limits for safety
+    
     fn validate(&self) -> PyResult<bool> {
-        // Check for finite values
-        for &vel in &self.linear {
-            if !vel.is_finite() {
-                return Ok(false);
-            }
-        }
-        for &vel in &self.angular {
-            if !vel.is_finite() {
-                return Ok(false);
-            }
-        }
-
-        // Safety limits for turtlebot-style robots
-        const MAX_LINEAR_VEL: f32 = 2.0; // 2 m/s max
-        const MAX_ANGULAR_VEL: f32 = 4.0; // 4 rad/s max
-
-        for &vel in &self.linear {
-            if vel.abs() > MAX_LINEAR_VEL {
-                return Ok(false);
-            }
-        }
-        for &vel in &self.angular {
-            if vel.abs() > MAX_ANGULAR_VEL {
-                return Ok(false);
-            }
-        }
-
-        Ok(true)
+        // Check velocity limits
+        let max_linear = 10.0; // m/s
+        let max_angular = 2.0 * 3.14159; // rad/s
+        
+        let linear_speed = (self.linear.x * self.linear.x + 
+                          self.linear.y * self.linear.y + 
+                          self.linear.z * self.linear.z).sqrt();
+        let angular_speed = (self.angular.x * self.angular.x + 
+                           self.angular.y * self.angular.y + 
+                           self.angular.z * self.angular.z).sqrt();
+        
+        Ok(linear_speed <= max_linear && angular_speed <= max_angular)
     }
-
-    /// Get linear velocity
-    #[getter]
-    fn get_linear(&self) -> [f32; 3] {
-        self.linear
+    
+    fn set_linear_xyz(&mut self, x: f64, y: f64, z: f64) {
+        self.linear.x = x;
+        self.linear.y = y;
+        self.linear.z = z;
     }
-
-    /// Set linear velocity
-    #[setter]
-    fn set_linear(&mut self, value: [f32; 3]) {
-        self.linear = value;
+    
+    fn set_angular_xyz(&mut self, x: f64, y: f64, z: f64) {
+        self.angular.x = x;
+        self.angular.y = y;
+        self.angular.z = z;
     }
+}
 
-    /// Get angular velocity
-    #[getter]
-    fn get_angular(&self) -> [f32; 3] {
-        self.angular
-    }
+// =============================================================================
+// Python Message Types - nav_msgs
+// =============================================================================
 
-    /// Set angular velocity
-    #[setter]
-    fn set_angular(&mut self, value: [f32; 3]) {
-        self.angular = value;
-    }
-
-    /// Set linear velocity from individual components (convenience method)
-    fn set_linear_xyz(&mut self, x: f32, y: f32, z: f32) {
-        self.linear = [x, y, z];
-    }
-
-    /// Set angular velocity from individual components (convenience method)
-    fn set_angular_xyz(&mut self, x: f32, y: f32, z: f32) {
-        self.angular = [x, y, z];
-    }
+/// Python wrapper for Odometry message
+#[pyclass]
+#[derive(Clone)]
+pub struct PyOdometryMessage {
+    #[pyo3(get, set)]
+    pub header: PyHeaderMessage,
+    #[pyo3(get, set)]
+    pub child_frame_id: String,
+    #[pyo3(get, set)]
+    pub pose: PyPoseMessage,
+    #[pyo3(get, set)]
+    pub twist: PyTwistMessage,
 }
 
 #[pymethods]
@@ -349,28 +515,35 @@ impl PyOdometryMessage {
     #[new]
     fn new() -> Self {
         PyOdometryMessage {
-            position: [0.0, 0.0, 0.0],
-            orientation: [0.0, 0.0, 0.0, 1.0], // Unit quaternion
-            linear_velocity: [0.0, 0.0, 0.0],
-            angular_velocity: [0.0, 0.0, 0.0],
-            frame_id: "odom".to_string(),
+            header: PyHeaderMessage::new(),
+            child_frame_id: String::new(),
+            pose: PyPoseMessage::new(),
+            twist: PyTwistMessage::new(),
         }
     }
-
-    /// Get yaw angle from quaternion (convenience method)
-    fn get_yaw(&self) -> f32 {
-        // Convert quaternion to yaw (z-axis rotation)
-        2.0 * self.orientation[2].atan2(self.orientation[3])
+    
+    fn get_yaw(&self) -> f64 {
+        // Extract yaw from quaternion
+        let q = &self.pose.orientation;
+        2.0 * (q.w * q.z + q.x * q.y).atan2(1.0 - 2.0 * (q.y * q.y + q.z * q.z))
     }
-
-    /// Set pose from position and yaw angle (convenience method)
-    fn set_pose_2d(&mut self, x: f32, y: f32, yaw: f32) {
-        self.position = [x, y, 0.0];
-        // Convert yaw to quaternion
+    
+    fn set_pose_2d(&mut self, x: f64, y: f64, yaw: f64) {
+        self.pose.position.x = x;
+        self.pose.position.y = y;
+        self.pose.position.z = 0.0;
+        
         let half_yaw = yaw / 2.0;
-        self.orientation = [0.0, 0.0, half_yaw.sin(), half_yaw.cos()];
+        self.pose.orientation.x = 0.0;
+        self.pose.orientation.y = 0.0;
+        self.pose.orientation.z = half_yaw.sin();
+        self.pose.orientation.w = half_yaw.cos();
     }
 }
+
+// =============================================================================
+// Logger and Visualization
+// =============================================================================
 
 /// Logger for Python
 #[pyclass]
@@ -497,30 +670,62 @@ impl PyVisualizationClient {
 
 /// Initialize function for Python module
 pub fn init_python_module(m: &PyModule) -> PyResult<()> {
+    // Core classes
     m.add_class::<Node>()?;
     m.add_class::<Publisher>()?;
     m.add_class::<Subscription>()?;
-    m.add_class::<StringMessage>()?;
     m.add_class::<Logger>()?;
     m.add_class::<PyVisualizationClient>()?;
 
-    // Add new message types for turtlebot control
+    // std_msgs
+    m.add_class::<PyStringMessage>()?;
+    m.add_class::<PyInt32Message>()?;
+    m.add_class::<PyInt64Message>()?;
+    m.add_class::<PyFloat32Message>()?;
+    m.add_class::<PyFloat64Message>()?;
+    m.add_class::<PyBoolMessage>()?;
+    m.add_class::<PyHeaderMessage>()?;
+
+    // geometry_msgs
+    m.add_class::<PyPointMessage>()?;
+    m.add_class::<PyVector3Message>()?;
+    m.add_class::<PyQuaternionMessage>()?;
+    m.add_class::<PyPoseMessage>()?;
+    m.add_class::<PyPoseStampedMessage>()?;
     m.add_class::<PyTwistMessage>()?;
+
+    // nav_msgs
     m.add_class::<PyOdometryMessage>()?;
 
-    // Add message types as module attributes
-    m.add("StringMessage", m.py().get_type::<StringMessage>())?;
-    m.add("String", m.py().get_type::<StringMessage>())?; // For backward compatibility
+    // Add message types as module attributes with ROS2 naming convention
+    // std_msgs
+    m.add("String", m.py().get_type::<PyStringMessage>())?;
+    m.add("Int32", m.py().get_type::<PyInt32Message>())?;
+    m.add("Int64", m.py().get_type::<PyInt64Message>())?;
+    m.add("Float32", m.py().get_type::<PyFloat32Message>())?;
+    m.add("Float64", m.py().get_type::<PyFloat64Message>())?;
+    m.add("Bool", m.py().get_type::<PyBoolMessage>())?;
+    m.add("Header", m.py().get_type::<PyHeaderMessage>())?;
+    
+    // geometry_msgs
+    m.add("Point", m.py().get_type::<PyPointMessage>())?;
+    m.add("Vector3", m.py().get_type::<PyVector3Message>())?;
+    m.add("Quaternion", m.py().get_type::<PyQuaternionMessage>())?;
+    m.add("Pose", m.py().get_type::<PyPoseMessage>())?;
+    m.add("PoseStamped", m.py().get_type::<PyPoseStampedMessage>())?;
+    m.add("Twist", m.py().get_type::<PyTwistMessage>())?;
+    
+    // nav_msgs
+    m.add("Odometry", m.py().get_type::<PyOdometryMessage>())?;
+
+    // Legacy aliases for backward compatibility
+    m.add("StringMessage", m.py().get_type::<PyStringMessage>())?;
     m.add("PoseMessage", m.py().get_type::<PyPoseMessage>())?;
-    m.add("Pose", m.py().get_type::<PyPoseMessage>())?; // For backward compatibility
     m.add("TwistMessage", m.py().get_type::<PyTwistMessage>())?;
-    m.add("Twist", m.py().get_type::<PyTwistMessage>())?; // For backward compatibility
     m.add("OdometryMessage", m.py().get_type::<PyOdometryMessage>())?;
-    m.add("Odometry", m.py().get_type::<PyOdometryMessage>())?; // For backward compatibility
-    m.add(
-        "VisualizationClient",
-        m.py().get_type::<PyVisualizationClient>(),
-    )?; // Expose as VisualizationClient
+    
+    // Visualization
+    m.add("VisualizationClient", m.py().get_type::<PyVisualizationClient>())?;
 
     // Add utility functions
     m.add_function(wrap_pyfunction!(init, m)?)?;
