@@ -7,6 +7,28 @@ A high-performance ROS2-like middleware with Python API compatibility.
 try:
     from ._core import Node as _RustNode, Publisher as _RustPublisher, Subscription as _RustSubscription
     from ._core import init as _rust_init, shutdown as _rust_shutdown, spin as _rust_spin, spin_once as _rust_spin_once
+    
+    # Import new message types from Rust bindings
+    from ._core import (
+        # std_msgs
+        String as _RustString, Int32 as _RustInt32, Int64 as _RustInt64,
+        Float32 as _RustFloat32, Float64 as _RustFloat64, Bool as _RustBool,
+        Header as _RustHeader,
+        
+        # geometry_msgs  
+        Point as _RustPoint, Vector3 as _RustVector3, Quaternion as _RustQuaternion,
+        Pose as _RustPose, PoseStamped as _RustPoseStamped, Twist as _RustTwist,
+        
+        # nav_msgs
+        Odometry as _RustOdometry,
+        
+        # Legacy aliases
+        StringMessage as _RustStringMessage, PoseMessage as _RustPoseMessage, 
+        TwistMessage as _RustTwistMessage, OdometryMessage as _RustOdometryMessage,
+        
+        # Visualization
+        VisualizationClient as _RustVisualizationClient
+    )
     _BINDINGS_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: Rust bindings not available: {e}")
@@ -16,33 +38,182 @@ from typing import Callable, Any, Optional
 import threading
 import time
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __author__ = "Chenyu Cao"
 __email__ = "ruziniuuuuu@gmail.com"
 
 # Global state
 _initialized = False
 
-# Message types for compatibility (defined early for MessageBus)
-class String:
-    """String message type for compatibility"""
-    def __init__(self, data: str = ""):
-        self.data = data
+# =============================================================================
+# Message Type Definitions (with Rust binding fallback)
+# =============================================================================
 
-class Float64:
-    """Float64 message type for compatibility"""  
-    def __init__(self, data: float = 0.0):
-        self.data = data
+# std_msgs package
+class std_msgs:
+    if _BINDINGS_AVAILABLE:
+        String = _RustString
+        Int32 = _RustInt32
+        Int64 = _RustInt64
+        Float32 = _RustFloat32
+        Float64 = _RustFloat64
+        Bool = _RustBool
+        Header = _RustHeader
+    else:
+        # Python stubs for when Rust bindings are not available
+        class String:
+            def __init__(self, data: str = ""):
+                self.data = data
+        
+        class Int32:
+            def __init__(self, data: int = 0):
+                self.data = data
+        
+        class Int64:
+            def __init__(self, data: int = 0):
+                self.data = data
+                
+        class Float32:
+            def __init__(self, data: float = 0.0):
+                self.data = data
+        
+        class Float64:
+            def __init__(self, data: float = 0.0):
+                self.data = data
+        
+        class Bool:
+            def __init__(self, data: bool = False):
+                self.data = data
+        
+        class Header:
+            def __init__(self):
+                self.stamp_sec = 0
+                self.stamp_nanosec = 0
+                self.frame_id = ""
 
-class Int32:
-    """Int32 message type for compatibility"""
-    def __init__(self, data: int = 0):
-        self.data = data
+# geometry_msgs package
+class geometry_msgs:
+    if _BINDINGS_AVAILABLE:
+        Point = _RustPoint
+        Vector3 = _RustVector3
+        Quaternion = _RustQuaternion
+        Pose = _RustPose
+        PoseStamped = _RustPoseStamped
+        Twist = _RustTwist
+    else:
+        # Python stubs
+        class Point:
+            def __init__(self):
+                self.x = 0.0
+                self.y = 0.0
+                self.z = 0.0
+        
+        class Vector3:
+            def __init__(self):
+                self.x = 0.0
+                self.y = 0.0
+                self.z = 0.0
+        
+        class Quaternion:
+            def __init__(self):
+                self.x = 0.0
+                self.y = 0.0
+                self.z = 0.0
+                self.w = 1.0
+        
+        class Pose:
+            def __init__(self):
+                self.position = geometry_msgs.Point()
+                self.orientation = geometry_msgs.Quaternion()
+        
+        class PoseStamped:
+            def __init__(self):
+                self.header = std_msgs.Header()
+                self.pose = geometry_msgs.Pose()
+        
+        class Twist:
+            def __init__(self):
+                self.linear = geometry_msgs.Vector3()
+                self.angular = geometry_msgs.Vector3()
 
-# Aliases for ROS2 compatibility
-StringMessage = String
-Float64Message = Float64
-Int32Message = Int32
+# nav_msgs package
+class nav_msgs:
+    if _BINDINGS_AVAILABLE:
+        Odometry = _RustOdometry
+    else:
+        # Python stub
+        class Odometry:
+            def __init__(self):
+                self.header = std_msgs.Header()
+                self.child_frame_id = ""
+                self.pose = geometry_msgs.Pose()
+                self.twist = geometry_msgs.Twist()
+
+# =============================================================================
+# Backward Compatibility Aliases
+# =============================================================================
+
+# Direct message type aliases for backward compatibility
+if _BINDINGS_AVAILABLE:
+    String = _RustString
+    StringMessage = _RustStringMessage
+    Float64 = _RustFloat64
+    Float64Message = _RustFloat64
+    Int32 = _RustInt32
+    Int32Message = _RustInt32
+    Bool = _RustBool
+    BoolMessage = _RustBool
+    Header = _RustHeader
+    
+    Point = _RustPoint
+    Vector3 = _RustVector3
+    Quaternion = _RustQuaternion
+    Pose = _RustPose
+    PoseMessage = _RustPoseMessage
+    PoseStamped = _RustPoseStamped
+    Twist = _RustTwist
+    TwistMessage = _RustTwistMessage
+    
+    Odometry = _RustOdometry
+    OdometryMessage = _RustOdometryMessage
+    
+    VisualizationClient = _RustVisualizationClient
+else:
+    # Use stub classes
+    String = std_msgs.String
+    StringMessage = std_msgs.String
+    Float64 = std_msgs.Float64
+    Float64Message = std_msgs.Float64
+    Int32 = std_msgs.Int32
+    Int32Message = std_msgs.Int32
+    Bool = std_msgs.Bool
+    BoolMessage = std_msgs.Bool
+    Header = std_msgs.Header
+    
+    Point = geometry_msgs.Point
+    Vector3 = geometry_msgs.Vector3
+    Quaternion = geometry_msgs.Quaternion
+    Pose = geometry_msgs.Pose
+    PoseMessage = geometry_msgs.Pose
+    PoseStamped = geometry_msgs.PoseStamped
+    Twist = geometry_msgs.Twist
+    TwistMessage = geometry_msgs.Twist
+    
+    Odometry = nav_msgs.Odometry
+    OdometryMessage = nav_msgs.Odometry
+    
+    # Visualization stub
+    class VisualizationClient:
+        def __init__(self, application_id="miniROS", spawn_viewer=False):
+            print(f"[STUB] VisualizationClient: {application_id}")
+        def log_scalar(self, entity_path, value):
+            print(f"[STUB] log_scalar: {entity_path} = {value}")
+        def log_points(self, entity_path, points):
+            print(f"[STUB] log_points: {entity_path} = {len(points)} points")
+
+# =============================================================================
+# Message Bus for Demonstration
+# =============================================================================
 
 # Simple message bus for demonstration
 class MessageBus:
@@ -61,25 +232,18 @@ class MessageBus:
             if topic in self.subscribers:
                 for callback, sub_msg_type in self.subscribers[topic]:
                     if sub_msg_type == msg_type:
-                        # Create message object and call callback
-                        if msg_type == 'String':
-                            msg = String(data if isinstance(data, str) else str(data))
-                        elif msg_type == 'Float64':
-                            msg = Float64(float(data))
-                        elif msg_type == 'Int32':
-                            msg = Int32(int(data))
-                        else:
-                            msg = String(str(data))
-                        
                         try:
-                            callback(msg)
+                            callback(data)
                         except Exception as e:
                             print(f"Error in subscriber callback: {e}")
 
 # Global message bus instance
 _message_bus = MessageBus()
 
-# Python stubs for when Rust bindings are not available
+# =============================================================================
+# Python Stubs for Missing Rust Bindings  
+# =============================================================================
+
 if not _BINDINGS_AVAILABLE:
     class _RustNode:
         def __init__(self, name): 
@@ -123,6 +287,9 @@ if not _BINDINGS_AVAILABLE:
         import time
         time.sleep((timeout_ms or 100) / 1000.0)
 
+# =============================================================================
+# Core API Functions
+# =============================================================================
 
 def init(*, args=None, context=None, log_level=None):
     """
@@ -198,17 +365,17 @@ class Node:
         self._node_name = node_name
         self._subscriptions = []
         self._publishers = []
-    
+
     def get_name(self) -> str:
-        """Get the node name"""
-        return self._node_name
-    
+        """Get the name of this node"""
+        return self._rust_node.get_name()
+
     def get_namespace(self) -> str:
-        """Get the node namespace (always '/' for compatibility)"""
+        """Get the namespace of this node (always '/' for miniROS)"""
         return "/"
-    
+
     def get_logger(self):
-        """Get logger (returns simple logger for compatibility)"""
+        """Get a logger for this node"""
         node_name = self._node_name
         class SimpleLogger:
             def info(self, msg): print(f"[INFO] [{node_name}]: {msg}")
@@ -216,147 +383,125 @@ class Node:
             def error(self, msg): print(f"[ERROR] [{node_name}]: {msg}")
             def debug(self, msg): print(f"[DEBUG] [{node_name}]: {msg}")
         return SimpleLogger()
-    
+
     def create_publisher(self, msg_type, topic: str, qos_profile=10, *, callback_group=None, event_callbacks=None):
         """
-        Create a publisher
+        Create a publisher for the given message type and topic
         
         Args:
-            msg_type: Message type (String, Float64, Int32)
-            topic: Topic name
+            msg_type: Message type class
+            topic: Topic name to publish to
             qos_profile: QoS profile (unused, for compatibility)
             callback_group: Callback group (unused, for compatibility)
             event_callbacks: Event callbacks (unused, for compatibility)
             
         Returns:
-            Publisher: Publisher instance
+            Publisher: A publisher instance
         """
-        # Convert message type to string
-        if hasattr(msg_type, '__name__'):
-            type_name = msg_type.__name__
-        else:
-            type_name = str(msg_type)
+        rust_publisher = self._rust_node.create_publisher(msg_type, topic, qos_profile)
+        
+        # Get the message type name for registration
+        msg_type_name = getattr(msg_type, '__name__', str(msg_type))
+        if hasattr(msg_type, '__module__'):
+            msg_type_name = f"{msg_type.__module__}.{msg_type_name}"
             
-        # Map common ROS2 message types
-        if 'String' in type_name:
-            type_name = 'String'
-        elif 'Float64' in type_name:
-            type_name = 'Float64'
-        elif 'Int32' in type_name:
-            type_name = 'Int32'
-            
-        # Create the Rust publisher directly
-        rust_publisher = _RustPublisher(type_name, topic)
-        publisher = Publisher(rust_publisher, topic, type_name)
+        publisher = Publisher(rust_publisher, topic, msg_type_name)
         self._publishers.append(publisher)
         return publisher
-    
+
     def create_subscription(self, msg_type, topic: str, callback: Callable, qos_profile=10, *, 
                           callback_group=None, event_callbacks=None, raw=False):
         """
-        Create a subscription
+        Create a subscription for the given message type and topic
         
         Args:
-            msg_type: Message type (String, Float64, Int32)
-            topic: Topic name
-            callback: Callback function
+            msg_type: Message type class
+            topic: Topic name to subscribe to
+            callback: Callback function to handle received messages
             qos_profile: QoS profile (unused, for compatibility)
-            callback_group: Callback group (unused, for compatibility)
+            callback_group: Callback group (unused, for compatibility) 
             event_callbacks: Event callbacks (unused, for compatibility)
-            raw: Use raw messages (unused, for compatibility)
+            raw: Raw message mode (unused, for compatibility)
             
         Returns:
-            Subscription: Subscription instance
+            Subscription: A subscription instance
         """
-        # Convert message type to string
-        if hasattr(msg_type, '__name__'):
-            type_name = msg_type.__name__
-        else:
-            type_name = str(msg_type)
+        rust_subscription = self._rust_node.create_subscription(msg_type, topic, callback, qos_profile)
+        
+        # Get the message type name for registration
+        msg_type_name = getattr(msg_type, '__name__', str(msg_type))  
+        if hasattr(msg_type, '__module__'):
+            msg_type_name = f"{msg_type.__module__}.{msg_type_name}"
             
-        # Map common ROS2 message types
-        if 'String' in type_name:
-            type_name = 'String'
-        elif 'Float64' in type_name:
-            type_name = 'Float64'
-        elif 'Int32' in type_name:
-            type_name = 'Int32'
-            
-        # Create the Rust subscription directly
-        rust_subscription = _RustSubscription(type_name, topic)
-        subscription = Subscription(rust_subscription, topic, type_name, callback)
+        subscription = Subscription(rust_subscription, topic, msg_type_name, callback)
         self._subscriptions.append(subscription)
         
-        # Register with the message bus
-        _message_bus.subscribe(topic, callback, type_name)
+        # Register with message bus for demo
+        _message_bus.subscribe(topic, callback, msg_type_name)
         
         return subscription
-    
+
     def destroy_node(self):
-        """Destroy the node and cleanup resources"""
-        if hasattr(self._rust_node, 'destroy_node'):
-            self._rust_node.destroy_node()
+        """Destroy this node and cleanup resources"""
+        self._rust_node.destroy_node()
+        self._subscriptions.clear()
+        self._publishers.clear()
 
 
 class Publisher:
-    """Publisher wrapper for ROS2 compatibility"""
+    """A publisher for sending messages to a topic"""
     
     def __init__(self, rust_publisher, topic: str, msg_type: str):
         self._rust_publisher = rust_publisher
         self._topic = topic
         self._msg_type = msg_type
-    
+
     def publish(self, msg):
         """
-        Publish a message
+        Publish a message to this topic
         
         Args:
-            msg: Message to publish (can be primitive type or message object)
+            msg: Message instance to publish
         """
-        # Extract data from message object if needed
-        if hasattr(msg, 'data'):
-            data = msg.data
-        else:
-            data = msg
-            
-        # Call Rust publisher directly (for logging)
-        self._rust_publisher.publish(data)
+        # Publish through rust binding
+        self._rust_publisher.publish(msg)
         
-        # Also publish to the message bus for subscriptions
-        _message_bus.publish(self._topic, data, self._msg_type)
-    
+        # Also publish through message bus for demo
+        _message_bus.publish(self._topic, msg, self._msg_type)
+
     def get_subscription_count(self) -> int:
-        """Get subscription count (returns 0 for compatibility)"""
+        """Get the number of subscribers to this topic"""
         return self._rust_publisher.get_subscription_count()
 
 
 class Subscription:
-    """Subscription wrapper for ROS2 compatibility"""
+    """A subscription for receiving messages from a topic"""
     
     def __init__(self, rust_subscription, topic: str, msg_type: str, callback: Callable):
         self._rust_subscription = rust_subscription
         self._topic = topic
         self._msg_type = msg_type
         self._callback = callback
-        # For now, subscriptions just store the callback
-        # In a full implementation, this would register with the transport layer
 
 
 def spin(node: Node, *, executor=None, context=None):
     """
-    Spin a node indefinitely
+    Spin a node (process callbacks) indefinitely
     
     Args:
         node: Node to spin
         executor: Executor (unused, for compatibility)
         context: Context (unused, for compatibility)
     """
-    _rust_spin(node._rust_node)
+    try:
+        _rust_spin(node._rust_node)
+    except KeyboardInterrupt:
+        pass
 
 
 def spin_once(node: Node, *, executor=None, timeout_sec=None, context=None):
     """
-    Spin a node once
+    Spin a node once (process callbacks once)
     
     Args:
         node: Node to spin
