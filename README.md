@@ -33,8 +33,9 @@ A **lightweight, high-performance** ROS2-compatible middleware implementation in
 
 ## 🛠️ Quick Start
 
-### Rust API
+### 💻 API Overview
 
+#### Rust API
 ```rust
 use mini_ros::prelude::*;
 
@@ -56,8 +57,7 @@ async fn main() -> Result<()> {
 }
 ```
 
-### Python API (ROS2 Compatible)
-
+#### Python API (ROS2 Compatible)
 ```python
 import mini_ros
 
@@ -85,34 +85,51 @@ pub.publish(msg)
 mini_ros.shutdown()
 ```
 
-## 📦 Installation
-
-### Rust
+### 🚀 One-Command Setup (Recommended)
 
 ```bash
-# Add to Cargo.toml
-[dependencies]
-mini-ros = "0.1"
-
-# With visualization
-mini-ros = { version = "0.1", features = ["visualization"] }
-```
-
-### Python
-
-```bash
-# Install from source
+# Clone and auto-setup everything
 git clone https://github.com/ruziniuuuuu/miniROS-rs
 cd miniROS-rs
-pip install -e .
 
-# With visualization support
-pip install -e ".[viz]"
+# One command to setup both Rust and Python CLIs
+bash scripts/setup.sh
+
+# Restart terminal or source config
+source ~/.zshrc  # for zsh
+# or source ~/.bashrc  # for bash
+
+# Ready to use!
+mini_ros pkg list
+mini_ros_py examples list
 ```
 
-## 🏃‍♂️ Quick Start
+#### 🔧 Advanced Setup Options
 
-### Using mini_ros CLI (Recommended)
+```bash
+# Show all available commands
+bash scripts/setup.sh help
+
+# Build CLIs only (no environment setup)
+bash scripts/setup.sh build
+
+# Setup environment only (if CLIs already built)
+bash scripts/setup.sh env
+
+# Test current installation
+bash scripts/setup.sh test
+
+# Clean build artifacts
+bash scripts/setup.sh clean
+
+# Smart wrapper (auto-selects best CLI)
+bash scripts/mini_ros_wrapper.sh pkg list      # → Uses Rust CLI
+bash scripts/mini_ros_wrapper.sh examples list # → Uses Python CLI
+```
+
+### 🎯 Alternative: Manual Setup
+
+#### Using mini_ros CLI (Recommended)
 
 ```bash
 # Build the project
@@ -127,7 +144,7 @@ cargo run --bin mini_ros run turtlebot teleop
 cargo run --bin mini_ros launch turtlebot full_system
 ```
 
-### Learning Examples (Progressive)
+#### Learning Examples (Progressive)
 
 ```bash
 # Basic pub/sub communication
@@ -146,7 +163,7 @@ cargo run --example 04_visualization_basic --features visualization
 cargo run --example 07_integrated_system
 ```
 
-### Turtlebot Package (Production Ready)
+#### Turtlebot Package (Production Ready)
 
 ```bash
 # Individual components
@@ -160,7 +177,7 @@ cargo run --bin mini_ros launch turtlebot teleop
 cargo run --bin mini_ros launch turtlebot full_system
 ```
 
-### Python Examples
+#### Python Examples
 
 ```bash
 cd python/examples
