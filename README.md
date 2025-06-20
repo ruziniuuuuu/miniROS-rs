@@ -25,6 +25,12 @@ A **lightweight, high-performance** ROS2-compatible middleware implementation in
 - **Multi-Transport** - DDS, TCP, UDP, and in-memory transport options
 - **Python Bindings** - ROS2 rclpy-compatible API for easy migration
 
+### New: Launch & Package System
+- **Package Management** - Organize code into reusable packages with manifests
+- **Launch System** - ROS2-like launch files for multi-node orchestration
+- **CLI Tools** - `mini_ros` command-line interface for easy package operations
+- **Built-in Packages** - Production-ready turtlebot package included
+
 ## 🛠️ Quick Start
 
 ### Rust API
@@ -104,9 +110,24 @@ pip install -e .
 pip install -e ".[viz]"
 ```
 
-## 🏃‍♂️ Examples
+## 🏃‍♂️ Quick Start
 
-### Rust Examples (Progressive Learning)
+### Using mini_ros CLI (Recommended)
+
+```bash
+# Build the project
+cargo build
+
+# List available packages
+cargo run --bin mini_ros pkg list
+
+# Run turtlebot demos
+cargo run --bin mini_ros run turtlebot controller
+cargo run --bin mini_ros run turtlebot teleop
+cargo run --bin mini_ros launch turtlebot full_system
+```
+
+### Learning Examples (Progressive)
 
 ```bash
 # Basic pub/sub communication
@@ -123,15 +144,20 @@ cargo run --example 04_visualization_basic --features visualization
 
 # Complete system integration
 cargo run --example 07_integrated_system
+```
 
-# Turtlebot controller (classic ROS robotics)
-cargo run --example 12_turtlebot_controller
+### Turtlebot Package (Production Ready)
 
-# Turtlebot keyboard control (teleop)
-cargo run --example 13_turtlebot_teleop
+```bash
+# Individual components
+cargo run --bin mini_ros run turtlebot controller
+cargo run --bin mini_ros run turtlebot teleop
+cargo run --bin mini_ros run turtlebot simulator
 
-# Turtlebot simulator with Rerun visualization
-cargo run --example 14_turtlebot_simulator --features visualization
+# Complete systems via launch files
+cargo run --bin mini_ros launch turtlebot simulation
+cargo run --bin mini_ros launch turtlebot teleop  
+cargo run --bin mini_ros launch turtlebot full_system
 ```
 
 ### Python Examples
@@ -139,17 +165,16 @@ cargo run --example 14_turtlebot_simulator --features visualization
 ```bash
 cd python/examples
 
-# Minimal publisher
+# Minimal publisher/subscriber
 python minimal_publisher.py
-
-# Minimal subscriber  
 python minimal_subscriber.py
 
-# Complete pub/sub demo
+# Complete demos
 python simple_pubsub.py
+python comprehensive_demo.py
 
-# Turtlebot controller (robotics control)
-python turtlebot_controller.py
+# Turtlebot Python controller
+cargo run --bin mini_ros run turtlebot py_controller
 ```
 
 ## 🏗️ Architecture

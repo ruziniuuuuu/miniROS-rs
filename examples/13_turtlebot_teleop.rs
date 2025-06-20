@@ -149,7 +149,7 @@ impl TurtlebotTeleop {
 
             // Read line input
             let mut input = String::new();
-            if let Ok(_) = stdin.read_line(&mut input) {
+            if stdin.read_line(&mut input).is_ok() {
                 let key = input.trim().chars().next().unwrap_or(' ');
                 
                 let (linear, angular) = match key.to_ascii_lowercase() {

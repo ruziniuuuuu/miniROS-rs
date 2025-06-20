@@ -29,6 +29,7 @@ use mini_ros::visualization::VisualizationConfig;
 
 /// Turtlebot simulator state
 pub struct TurtlebotSimulator {
+    #[allow(dead_code)]
     node: Node,
     cmd_vel_sub: Subscriber<TwistMessage>,
     odom_pub: Publisher<OdometryMessage>,
@@ -41,8 +42,11 @@ pub struct TurtlebotSimulator {
     angular_vel: f32,
     
     // Simulation parameters
+    #[allow(dead_code)]
     dt: f32,
+    #[allow(dead_code)]
     max_acceleration: f32,
+    #[allow(dead_code)]
     max_angular_acceleration: f32,
     
     // Visualization
@@ -163,6 +167,7 @@ impl TurtlebotSimulator {
     }
 
     /// Update velocity from received commands
+    #[allow(dead_code)]
     fn update_velocity_from_commands(&mut self) {
         // This is a simplified approach - in a real implementation,
         // you'd want to properly share the velocity state
@@ -185,7 +190,7 @@ impl TurtlebotSimulator {
         self.theta = self.normalize_angle(self.theta);
 
         // Add to path for visualization
-        if self.path_points.len() == 0 || 
+        if self.path_points.is_empty() || 
            (self.x - self.path_points.last().unwrap()[0]).abs() > 0.05 ||
            (self.y - self.path_points.last().unwrap()[1]).abs() > 0.05 {
             self.path_points.push([self.x, self.y]);
@@ -279,7 +284,7 @@ impl TurtlebotSimulator {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_nanos() as i64;
-        viz.set_time("sim_time", timestamp_ns);
+        let _ = viz.set_time("sim_time", timestamp_ns);
 
         // Log robot position and orientation
         let robot_pos = [self.x, self.y, 0.1];

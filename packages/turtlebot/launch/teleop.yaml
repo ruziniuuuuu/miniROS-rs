@@ -1,0 +1,16 @@
+name: "Turtlebot Teleop"
+global_env:
+  RUST_LOG: "info"
+  MINI_ROS_LOG_LEVEL: "info"
+timeout: null
+
+nodes:
+  - name: "turtlebot_teleop"
+    package: "turtlebot"
+    executable: "teleop"
+    args: []
+    env: {}
+    cwd: null
+    respawn: false
+    delay: 0.0
+    python: false 

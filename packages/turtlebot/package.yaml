@@ -1,0 +1,41 @@
+name: turtlebot
+version: "0.1.0"
+description: "Turtlebot simulation and control package for miniROS"
+author: "miniROS Team"
+license: "MIT OR Apache-2.0"
+dependencies: []
+python_support: true
+
+executables:
+  controller:
+    name: controller
+    path: "src/controller.rs"
+    python: false
+    description: "Basic turtlebot controller with movement patterns"
+    features: []
+    
+  teleop:
+    name: teleop
+    path: "src/teleop.rs"
+    python: false
+    description: "Keyboard teleoperation control for turtlebot"
+    features: []
+    
+  simulator:
+    name: simulator
+    path: "src/simulator.rs"
+    python: false
+    description: "Turtlebot simulator with Rerun visualization"
+    features: ["visualization"]
+    
+  py_controller:
+    name: py_controller
+    path: "scripts/controller.py"
+    python: true
+    description: "Python version of the turtlebot controller"
+    features: []
+
+launch_files:
+  simulation: "launch/simulation.yaml"
+  teleop: "launch/teleop.yaml"
+  full_system: "launch/full_system.yaml" 

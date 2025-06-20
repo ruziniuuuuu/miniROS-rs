@@ -25,6 +25,10 @@ pub mod dds_transport;
 pub mod transport;
 pub mod zenoh_transport;
 
+// Launch system for multi-node orchestration
+pub mod launch;
+pub mod packages;
+
 // Optional features
 #[cfg(feature = "python")]
 pub mod python;
@@ -35,8 +39,10 @@ pub mod visualization;
 pub use action::{ActionClient, ActionGoal, ActionResult, ActionServer, GoalStatus};
 pub use core::Context;
 pub use error::{MiniRosError, Result};
+pub use launch::{LaunchConfig, LaunchDescription, LaunchManager, NodeLaunchConfig};
 pub use message::{BoolMsg, EmptyMsg, Float64Msg, Int32Msg, Message, Stamped, StringMsg};
 pub use node::Node;
+pub use packages::{Package, PackageManager};
 pub use parameter::{ParameterClient, ParameterServer, ParameterValue};
 pub use publisher::Publisher;
 pub use service::{Service, ServiceClient};
@@ -46,8 +52,9 @@ pub use subscriber::Subscriber;
 pub mod prelude {
     pub use crate::{
         ActionClient, ActionServer, BoolMsg, Context, EmptyMsg, Float64Msg, GoalStatus, Int32Msg,
-        Message, MiniRosError, Node, ParameterClient, ParameterServer, ParameterValue, Publisher,
-        Result, Service, ServiceClient, Stamped, StringMsg, Subscriber,
+        LaunchConfig, LaunchDescription, LaunchManager, Message, MiniRosError, Node,
+        NodeLaunchConfig, Package, PackageManager, ParameterClient, ParameterServer,
+        ParameterValue, Publisher, Result, Service, ServiceClient, Stamped, StringMsg, Subscriber,
     };
     pub use std::time::Duration;
 }
