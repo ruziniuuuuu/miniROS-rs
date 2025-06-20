@@ -14,7 +14,7 @@
 //! - ESC: Exit
 
 use mini_ros::prelude::*;
-use mini_ros::types::{TwistMessage, Vector3, MiniRosMessage};
+use mini_ros::types::{MiniRosMessage, TwistMessage, Vector3};
 use std::io;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -66,7 +66,13 @@ impl TurtlebotTeleop {
         let max_angular = self.max_angular_speed;
 
         thread::spawn(move || {
-            Self::keyboard_input_loop(linear_speed, angular_speed, running, max_linear, max_angular);
+            Self::keyboard_input_loop(
+                linear_speed,
+                angular_speed,
+                running,
+                max_linear,
+                max_angular,
+            );
         });
 
         // Main control loop
@@ -79,29 +85,40 @@ impl TurtlebotTeleop {
 
             // Publish velocity command
             self.publish_velocity(linear, angular).await?;
-            
+
             sleep(Duration::from_millis(50)).await; // 20 Hz
         }
 
         // Send stop command before exit
         self.publish_velocity(0.0, 0.0).await?;
         info!("🛑 Teleop control stopped");
-        
+
         Ok(())
     }
 
     /// Publish velocity command
     async fn publish_velocity(&self, linear_x: f32, angular_z: f32) -> Result<()> {
         let twist = TwistMessage {
-            linear: Vector3 { x: linear_x, y: 0.0, z: 0.0 },
-            angular: Vector3 { x: 0.0, y: 0.0, z: angular_z },
+            linear: Vector3 {
+                x: linear_x,
+                y: 0.0,
+                z: 0.0,
+            },
+            angular: Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: angular_z,
+            },
         };
 
         // Validate and publish
         if twist.validate().is_ok() {
             self.cmd_vel_pub.publish(&twist).await?;
         } else {
-            warn!("⚠️  Invalid velocity command: linear={:.2}, angular={:.2}", linear_x, angular_z);
+            warn!(
+                "⚠️  Invalid velocity command: linear={:.2}, angular={:.2}",
+                linear_x, angular_z
+            );
         }
 
         Ok(())
@@ -118,7 +135,10 @@ impl TurtlebotTeleop {
         info!("   E + Enter: Decrease speed");
         info!("   Space + Enter: Emergency stop");
         info!("   X + Enter: Exit");
-        info!("   Max speeds: {:.1} m/s, {:.1} rad/s", self.max_linear_speed, self.max_angular_speed);
+        info!(
+            "   Max speeds: {:.1} m/s, {:.1} rad/s",
+            self.max_linear_speed, self.max_angular_speed
+        );
         info!("   Note: Press key then Enter for cross-platform compatibility");
     }
 
@@ -131,12 +151,12 @@ impl TurtlebotTeleop {
         max_angular: f32,
     ) {
         let speed_increment = 0.1f32;
-        let mut current_linear_speed = 0.5f32;  // Default speed
+        let mut current_linear_speed = 0.5f32; // Default speed
         let mut current_angular_speed = 1.0f32; // Default turn speed
 
         info!("🎮 Keyboard control active. Press keys to control robot.");
         info!("Note: For cross-platform compatibility, press Enter after each key.");
-        
+
         // For simplicity, we'll use a basic approach that works across platforms
 
         // Use a simple line-based input for cross-platform compatibility
@@ -151,50 +171,61 @@ impl TurtlebotTeleop {
             let mut input = String::new();
             if stdin.read_line(&mut input).is_ok() {
                 let key = input.trim().chars().next().unwrap_or(' ');
-                
+
                 let (linear, angular) = match key.to_ascii_lowercase() {
                     'w' => {
                         info!("⬆️  Forward");
                         (current_linear_speed, 0.0)
-                    },
+                    }
                     's' => {
                         info!("⬇️  Backward");
                         (-current_linear_speed, 0.0)
-                    },
+                    }
                     'a' => {
                         info!("⬅️  Turn left");
                         (0.0, current_angular_speed)
-                    },
+                    }
                     'd' => {
                         info!("➡️  Turn right");
                         (0.0, -current_angular_speed)
-                    },
-                    
+                    }
+
                     // Speed control
                     'q' => {
-                        current_linear_speed = f32::min(current_linear_speed + speed_increment, max_linear);
-                        current_angular_speed = f32::min(current_angular_speed + speed_increment, max_angular);
-                        info!("🔼 Speed increased: linear={:.1}, angular={:.1}", current_linear_speed, current_angular_speed);
+                        current_linear_speed =
+                            f32::min(current_linear_speed + speed_increment, max_linear);
+                        current_angular_speed =
+                            f32::min(current_angular_speed + speed_increment, max_angular);
+                        info!(
+                            "🔼 Speed increased: linear={:.1}, angular={:.1}",
+                            current_linear_speed, current_angular_speed
+                        );
                         (0.0, 0.0)
-                    },
+                    }
                     'e' => {
-                        current_linear_speed = f32::max(current_linear_speed - speed_increment, 0.1);
-                        current_angular_speed = f32::max(current_angular_speed - speed_increment, 0.1);
-                        info!("🔽 Speed decreased: linear={:.1}, angular={:.1}", current_linear_speed, current_angular_speed);
+                        current_linear_speed =
+                            f32::max(current_linear_speed - speed_increment, 0.1);
+                        current_angular_speed =
+                            f32::max(current_angular_speed - speed_increment, 0.1);
+                        info!(
+                            "🔽 Speed decreased: linear={:.1}, angular={:.1}",
+                            current_linear_speed, current_angular_speed
+                        );
                         (0.0, 0.0)
-                    },
-                    
+                    }
+
                     ' ' => {
                         info!("🛑 Emergency stop!");
                         (0.0, 0.0)
-                    },
-                    
-                    'x' => { // Use 'x' for exit (easier than ESC)
+                    }
+
+                    'x' => {
+                        // Use 'x' for exit (easier than ESC)
                         info!("🚪 Exit requested");
                         *running.lock().unwrap() = false;
                         break;
-                    },
-                    
+                    }
+
                     _ => {
                         info!("🛑 Stop (unknown key)");
                         (0.0, 0.0)
@@ -219,10 +250,10 @@ async fn main() -> Result<()> {
     info!("=== miniROS-rs Example 13: Turtlebot Teleop ===");
 
     let mut teleop = TurtlebotTeleop::new("turtlebot_teleop").await?;
-    
+
     // Start teleop control
     teleop.start_teleop().await?;
 
     info!("🏁 Turtlebot teleop finished");
     Ok(())
-} 
+}

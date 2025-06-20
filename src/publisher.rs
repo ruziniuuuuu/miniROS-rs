@@ -36,6 +36,8 @@ impl<T: Message> Publisher<T> {
     /// Publish a message to all subscribers
     #[allow(clippy::await_holding_lock)]
     pub async fn publish(&self, message: &T) -> Result<()> {
+        #[cfg(not(any(feature = "dds-transport", feature = "tcp-transport")))]
+        let _ = message; // Suppress unused warning when no transport features
         // Increment sequence number
         let seq = self.sequence.fetch_add(1, Ordering::Relaxed);
 

@@ -3,13 +3,13 @@
 //! Provides orchestration capabilities for launching multiple nodes simultaneously.
 //! Inspired by ROS2 launch but simplified for miniROS.
 
-use crate::{Result, MiniRosError};
+use crate::{MiniRosError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 use tokio::time::sleep;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 /// Configuration for launching a single node
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -96,19 +96,21 @@ impl LaunchConfig {
     pub fn from_yaml(path: &str) -> Result<Self> {
         let content = std::fs::read_to_string(path)
             .map_err(|e| MiniRosError::ConfigError(format!("Failed to read launch file: {}", e)))?;
-        
+
         serde_yaml::from_str(&content)
             .map_err(|e| MiniRosError::ConfigError(format!("Failed to parse launch file: {}", e)))
     }
 
     /// Save to YAML file
     pub fn to_yaml(&self, path: &str) -> Result<()> {
-        let content = serde_yaml::to_string(self)
-            .map_err(|e| MiniRosError::ConfigError(format!("Failed to serialize launch config: {}", e)))?;
-        
-        std::fs::write(path, content)
-            .map_err(|e| MiniRosError::ConfigError(format!("Failed to write launch file: {}", e)))?;
-        
+        let content = serde_yaml::to_string(self).map_err(|e| {
+            MiniRosError::ConfigError(format!("Failed to serialize launch config: {}", e))
+        })?;
+
+        std::fs::write(path, content).map_err(|e| {
+            MiniRosError::ConfigError(format!("Failed to write launch file: {}", e))
+        })?;
+
         Ok(())
     }
 }
@@ -194,8 +196,9 @@ impl LaunchedNode {
     /// Stop the process
     pub fn stop(&mut self) -> Result<()> {
         if let Some(ref mut process) = self.process {
-            process.kill()
-                .map_err(|e| MiniRosError::Custom(format!("Failed to kill process {}: {}", self.name, e)))?;
+            process.kill().map_err(|e| {
+                MiniRosError::Custom(format!("Failed to kill process {}: {}", self.name, e))
+            })?;
         }
         Ok(())
     }
@@ -223,15 +226,21 @@ impl LaunchManager {
     /// Launch all nodes from configuration
     pub async fn launch(&mut self, config: LaunchConfig) -> Result<()> {
         info!("🚀 Starting launch: {}", config.name);
-        
+
         for node_config in config.nodes {
             // Apply delay if specified
             if node_config.delay > 0.0 {
-                info!("⏳ Waiting {:.1}s before launching {}", node_config.delay, node_config.name);
+                info!(
+                    "⏳ Waiting {:.1}s before launching {}",
+                    node_config.delay, node_config.name
+                );
                 sleep(Duration::from_secs_f64(node_config.delay)).await;
             }
 
-            match self.launch_node(node_config.clone(), &config.global_env).await {
+            match self
+                .launch_node(node_config.clone(), &config.global_env)
+                .await
+            {
                 Ok(()) => info!("✅ Launched node: {}", node_config.name),
                 Err(e) => {
                     error!("❌ Failed to launch node {}: {}", node_config.name, e);
@@ -247,7 +256,11 @@ impl LaunchManager {
     }
 
     /// Launch a single node
-    async fn launch_node(&mut self, node_config: NodeLaunchConfig, global_env: &HashMap<String, String>) -> Result<()> {
+    async fn launch_node(
+        &mut self,
+        node_config: NodeLaunchConfig,
+        global_env: &HashMap<String, String>,
+    ) -> Result<()> {
         let mut cmd = if node_config.python {
             // Python node
             let mut python_cmd = Command::new("python3");
@@ -257,13 +270,14 @@ impl LaunchManager {
             // Rust node (as example)
             let mut cargo_cmd = Command::new("cargo");
             cargo_cmd.args(["run", "--example", &node_config.executable]);
-            
+
             // Add features if needed (for visualization examples)
-            if node_config.executable.contains("visualization") || 
-               node_config.executable.contains("simulator") {
+            if node_config.executable.contains("visualization")
+                || node_config.executable.contains("simulator")
+            {
                 cargo_cmd.args(["--features", "visualization"]);
             }
-            
+
             cargo_cmd
         };
 
@@ -285,12 +299,16 @@ impl LaunchManager {
 
         // Configure stdio
         cmd.stdout(Stdio::inherit())
-           .stderr(Stdio::inherit())
-           .stdin(Stdio::null());
+            .stderr(Stdio::inherit())
+            .stdin(Stdio::null());
 
         // Spawn process
-        let process = cmd.spawn()
-            .map_err(|e| MiniRosError::Custom(format!("Failed to spawn process for {}: {}", node_config.name, e)))?;
+        let process = cmd.spawn().map_err(|e| {
+            MiniRosError::Custom(format!(
+                "Failed to spawn process for {}: {}",
+                node_config.name, e
+            ))
+        })?;
 
         let launched_node = LaunchedNode {
             name: node_config.name.clone(),
@@ -312,7 +330,7 @@ impl LaunchManager {
             for (i, node) in self.launched_nodes.iter_mut().enumerate() {
                 if !node.is_running() {
                     warn!("💀 Node {} has stopped", node.name);
-                    
+
                     if node.config.respawn {
                         info!("🔄 Respawning node: {}", node.name);
                         restart_nodes.push(i);
@@ -324,10 +342,10 @@ impl LaunchManager {
             for &index in restart_nodes.iter().rev() {
                 let node_config = self.launched_nodes[index].config.clone();
                 self.launched_nodes.remove(index);
-                
+
                 // Wait a bit before respawning
                 sleep(Duration::from_secs(1)).await;
-                
+
                 if let Err(e) = self.launch_node(node_config.clone(), &HashMap::new()).await {
                     error!("❌ Failed to respawn {}: {}", node_config.name, e);
                 }
@@ -341,7 +359,7 @@ impl LaunchManager {
     /// Stop all launched nodes
     pub async fn stop_all(&mut self) -> Result<()> {
         info!("🛑 Stopping all launched nodes...");
-        
+
         for node in &mut self.launched_nodes {
             if let Err(e) = node.stop() {
                 warn!("⚠️ Error stopping {}: {}", node.name, e);
@@ -357,10 +375,13 @@ impl LaunchManager {
 
     /// Get status of all nodes
     pub fn get_status(&mut self) -> Vec<(String, bool, Duration)> {
-        self.launched_nodes.iter_mut().map(|node| {
-            let uptime = node.start_time.elapsed();
-            (node.name.clone(), node.is_running(), uptime)
-        }).collect()
+        self.launched_nodes
+            .iter_mut()
+            .map(|node| {
+                let uptime = node.start_time.elapsed();
+                (node.name.clone(), node.is_running(), uptime)
+            })
+            .collect()
     }
 }
 
@@ -371,4 +392,4 @@ impl Drop for LaunchManager {
             let _ = node.stop();
         }
     }
-} 
+}

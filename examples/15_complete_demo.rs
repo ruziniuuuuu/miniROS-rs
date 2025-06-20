@@ -20,7 +20,7 @@ use mini_ros::prelude::*;
 use mini_ros::visualization::VisualizationClient;
 use std::f32::consts::PI;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tokio::time::{sleep, Instant};
+use tokio::time::{Instant, sleep};
 use tracing::info;
 
 #[cfg(feature = "visualization")]
@@ -34,16 +34,16 @@ pub struct TurtlebotDemo {
     theta: f32,
     linear_vel: f32,
     angular_vel: f32,
-    
+
     // Control state
     target_linear: f32,
     target_angular: f32,
     speed_setting: f32,
-    
+
     // Visualization
     #[cfg(feature = "visualization")]
     viz_client: Option<VisualizationClient>,
-    
+
     // Path tracking
     path_points: Vec<[f32; 2]>,
     last_update: Instant,
@@ -59,7 +59,7 @@ impl TurtlebotDemo {
                 application_id: "turtlebot_demo".to_string(),
                 spawn_viewer: true,
             };
-            
+
             match VisualizationClient::new(config) {
                 Ok(client) => {
                     info!("📊 Rerun visualization initialized");
@@ -102,12 +102,12 @@ impl TurtlebotDemo {
 
         // Start input handling in a separate task
         let (tx, mut rx) = tokio::sync::mpsc::channel::<char>(32);
-        
+
         tokio::spawn(async move {
             Self::keyboard_input_task(tx).await;
         });
 
-                 // Main simulation loop
+        // Main simulation loop
         loop {
             let now = Instant::now();
             let dt = now.duration_since(self.last_update).as_secs_f32();
@@ -213,11 +213,12 @@ impl TurtlebotDemo {
         }
 
         // Add to path for visualization
-        if self.path_points.is_empty() || 
-           (self.x - self.path_points.last().unwrap()[0]).abs() > 0.05 ||
-           (self.y - self.path_points.last().unwrap()[1]).abs() > 0.05 {
+        if self.path_points.is_empty()
+            || (self.x - self.path_points.last().unwrap()[0]).abs() > 0.05
+            || (self.y - self.path_points.last().unwrap()[1]).abs() > 0.05
+        {
             self.path_points.push([self.x, self.y]);
-            
+
             // Limit path length
             if self.path_points.len() > 1000 {
                 self.path_points.remove(0);
@@ -233,7 +234,10 @@ impl TurtlebotDemo {
 
         // Log ground plane markers
         let ground_points = vec![
-            [-5.0, -5.0, 0.0], [5.0, -5.0, 0.0], [5.0, 5.0, 0.0], [-5.0, 5.0, 0.0],
+            [-5.0, -5.0, 0.0],
+            [5.0, -5.0, 0.0],
+            [5.0, 5.0, 0.0],
+            [-5.0, 5.0, 0.0],
         ];
         viz.log_points("world/ground", ground_points)?;
 
@@ -259,7 +263,8 @@ impl TurtlebotDemo {
 
         // Log robot path
         if self.path_points.len() > 1 {
-            let path_3d: Vec<[f32; 3]> = self.path_points
+            let path_3d: Vec<[f32; 3]> = self
+                .path_points
                 .iter()
                 .map(|p| [p[0], p[1], 0.02])
                 .collect();
@@ -270,11 +275,11 @@ impl TurtlebotDemo {
         if self.linear_vel.abs() > 0.01 || self.angular_vel.abs() > 0.01 {
             let vel_end_x = self.x + self.linear_vel * self.theta.cos() * 0.5;
             let vel_end_y = self.y + self.linear_vel * self.theta.sin() * 0.5;
-            
-            viz.log_points("world/velocity", vec![
-                [self.x, self.y, 0.15],
-                [vel_end_x, vel_end_y, 0.15],
-            ])?;
+
+            viz.log_points(
+                "world/velocity",
+                vec![[self.x, self.y, 0.15], [vel_end_x, vel_end_y, 0.15]],
+            )?;
         }
 
         // Log telemetry
@@ -303,10 +308,15 @@ impl TurtlebotDemo {
         static mut COUNTER: u32 = 0;
         unsafe {
             COUNTER += 1;
-            if COUNTER % 40 == 0 { // Print every 2 seconds
+            if COUNTER % 40 == 0 {
+                // Print every 2 seconds
                 info!(
                     "🤖 Robot: pos=({:.2}, {:.2}), θ={:.1}°, vel=({:.2}, {:.2})",
-                    self.x, self.y, self.theta.to_degrees(), self.linear_vel, self.angular_vel
+                    self.x,
+                    self.y,
+                    self.theta.to_degrees(),
+                    self.linear_vel,
+                    self.angular_vel
                 );
             }
         }
@@ -315,7 +325,7 @@ impl TurtlebotDemo {
     /// Keyboard input task
     async fn keyboard_input_task(tx: tokio::sync::mpsc::Sender<char>) {
         use std::io;
-        
+
         loop {
             let mut input = String::new();
             if io::stdin().read_line(&mut input).is_ok() {
@@ -342,11 +352,13 @@ async fn main() -> Result<()> {
 
     #[cfg(not(feature = "visualization"))]
     {
-        info!("⚠️  For best experience, run with: cargo run --example 15_complete_demo --features visualization");
+        info!(
+            "⚠️  For best experience, run with: cargo run --example 15_complete_demo --features visualization"
+        );
     }
 
     let mut demo = TurtlebotDemo::new().await?;
     demo.run_demo().await?;
 
     Ok(())
-} 
+}

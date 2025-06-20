@@ -211,10 +211,8 @@ pub struct PyPoseMessage {
 #[pyclass]
 #[derive(Clone)]
 pub struct PyTwistMessage {
-    #[pyo3(get, set)]
-    pub linear: [f32; 3],    // Linear velocity [x, y, z] in m/s
-    #[pyo3(get, set)]
-    pub angular: [f32; 3],   // Angular velocity [x, y, z] in rad/s
+    pub linear: [f32; 3],  // Linear velocity [x, y, z] in m/s
+    pub angular: [f32; 3], // Angular velocity [x, y, z] in rad/s
 }
 
 /// Python wrapper for Odometry message
@@ -222,13 +220,13 @@ pub struct PyTwistMessage {
 #[derive(Clone)]
 pub struct PyOdometryMessage {
     #[pyo3(get, set)]
-    pub position: [f32; 3],      // Current position [x, y, z]
+    pub position: [f32; 3], // Current position [x, y, z]
     #[pyo3(get, set)]
-    pub orientation: [f32; 4],   // Current orientation quaternion [x, y, z, w]
+    pub orientation: [f32; 4], // Current orientation quaternion [x, y, z, w]
     #[pyo3(get, set)]
-    pub linear_velocity: [f32; 3],   // Current linear velocity
+    pub linear_velocity: [f32; 3], // Current linear velocity
     #[pyo3(get, set)]
-    pub angular_velocity: [f32; 3],  // Current angular velocity
+    pub angular_velocity: [f32; 3], // Current angular velocity
     #[pyo3(get, set)]
     pub frame_id: String,
 }
@@ -294,7 +292,7 @@ impl PyTwistMessage {
         }
 
         // Safety limits for turtlebot-style robots
-        const MAX_LINEAR_VEL: f32 = 2.0;  // 2 m/s max
+        const MAX_LINEAR_VEL: f32 = 2.0; // 2 m/s max
         const MAX_ANGULAR_VEL: f32 = 4.0; // 4 rad/s max
 
         for &vel in &self.linear {
@@ -311,13 +309,37 @@ impl PyTwistMessage {
         Ok(true)
     }
 
-    /// Set linear velocity (convenience method)
-    fn set_linear(&mut self, x: f32, y: f32, z: f32) {
+    /// Get linear velocity
+    #[getter]
+    fn get_linear(&self) -> [f32; 3] {
+        self.linear
+    }
+
+    /// Set linear velocity
+    #[setter]
+    fn set_linear(&mut self, value: [f32; 3]) {
+        self.linear = value;
+    }
+
+    /// Get angular velocity
+    #[getter]
+    fn get_angular(&self) -> [f32; 3] {
+        self.angular
+    }
+
+    /// Set angular velocity
+    #[setter]
+    fn set_angular(&mut self, value: [f32; 3]) {
+        self.angular = value;
+    }
+
+    /// Set linear velocity from individual components (convenience method)
+    fn set_linear_xyz(&mut self, x: f32, y: f32, z: f32) {
         self.linear = [x, y, z];
     }
 
-    /// Set angular velocity (convenience method)
-    fn set_angular(&mut self, x: f32, y: f32, z: f32) {
+    /// Set angular velocity from individual components (convenience method)
+    fn set_angular_xyz(&mut self, x: f32, y: f32, z: f32) {
         self.angular = [x, y, z];
     }
 }

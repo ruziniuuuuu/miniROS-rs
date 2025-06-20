@@ -3,10 +3,10 @@
 //! Command-line interface for miniROS package and launch management.
 //! Provides ROS2-like commands for launching nodes and managing packages.
 
+use clap::{Arg, ArgMatches, Command};
 use mini_ros::prelude::*;
-use clap::{Arg, Command, ArgMatches};
 use std::process;
-use tracing::{info, error};
+use tracing::{error, info};
 
 #[tokio::main]
 async fn main() {
@@ -24,28 +24,25 @@ async fn main() {
                     Arg::new("package")
                         .help("Package name")
                         .required(true)
-                        .index(1)
+                        .index(1),
                 )
                 .arg(
                     Arg::new("launch_file")
                         .help("Launch file name")
                         .required(true)
-                        .index(2)
+                        .index(2),
                 )
                 .arg(
                     Arg::new("args")
                         .help("Additional arguments")
                         .num_args(0..)
-                        .last(true)
-                )
+                        .last(true),
+                ),
         )
         .subcommand(
             Command::new("pkg")
                 .about("Package management commands")
-                .subcommand(
-                    Command::new("list")
-                        .about("List available packages")
-                )
+                .subcommand(Command::new("list").about("List available packages"))
                 .subcommand(
                     Command::new("create")
                         .about("Create a new package")
@@ -53,25 +50,23 @@ async fn main() {
                             Arg::new("name")
                                 .help("Package name")
                                 .required(true)
-                                .index(1)
+                                .index(1),
                         )
                         .arg(
                             Arg::new("path")
                                 .help("Package path (optional)")
                                 .long("path")
-                                .value_name("PATH")
-                        )
+                                .value_name("PATH"),
+                        ),
                 )
                 .subcommand(
-                    Command::new("info")
-                        .about("Show package information")
-                        .arg(
-                            Arg::new("name")
-                                .help("Package name")
-                                .required(true)
-                                .index(1)
-                        )
-                )
+                    Command::new("info").about("Show package information").arg(
+                        Arg::new("name")
+                            .help("Package name")
+                            .required(true)
+                            .index(1),
+                    ),
+                ),
         )
         .subcommand(
             Command::new("run")
@@ -80,20 +75,20 @@ async fn main() {
                     Arg::new("package")
                         .help("Package name")
                         .required(true)
-                        .index(1)
+                        .index(1),
                 )
                 .arg(
                     Arg::new("executable")
                         .help("Executable name")
                         .required(true)
-                        .index(2)
+                        .index(2),
                 )
                 .arg(
                     Arg::new("args")
                         .help("Additional arguments")
                         .num_args(0..)
-                        .last(true)
-                )
+                        .last(true),
+                ),
         )
         .get_matches();
 
@@ -117,25 +112,27 @@ async fn main() {
 async fn handle_launch_command(matches: &ArgMatches) -> Result<()> {
     let package_name = matches.get_one::<String>("package").unwrap();
     let launch_file = matches.get_one::<String>("launch_file").unwrap();
-    
+
     info!("🚀 Launching: {} {}", package_name, launch_file);
 
     // Initialize package manager
     let mut pkg_manager = PackageManager::new();
-    
+
     // Install built-in packages first
     pkg_manager.install_builtin_packages()?;
-    
+
     // Discover additional packages
     pkg_manager.discover_packages()?;
 
     // Get launch file path
     let launch_path = pkg_manager
         .get_launch_file(package_name, launch_file)
-        .ok_or_else(|| MiniRosError::ConfigError(format!(
-            "Launch file '{}' not found in package '{}'", 
-            launch_file, package_name
-        )))?;
+        .ok_or_else(|| {
+            MiniRosError::ConfigError(format!(
+                "Launch file '{}' not found in package '{}'",
+                launch_file, package_name
+            ))
+        })?;
 
     info!("📄 Loading launch file: {}", launch_path.display());
 
@@ -144,11 +141,11 @@ async fn handle_launch_command(matches: &ArgMatches) -> Result<()> {
 
     // Create launch manager and start
     let mut launch_manager = LaunchManager::new();
-    
+
     // Handle Ctrl+C gracefully
     let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
     let running_clone = running.clone();
-    
+
     tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
         info!("📡 Received Ctrl+C, stopping launch...");
@@ -174,7 +171,7 @@ async fn handle_launch_command(matches: &ArgMatches) -> Result<()> {
 
     // Stop all nodes
     launch_manager.stop_all().await?;
-    
+
     info!("🏁 Launch completed");
     Ok(())
 }
@@ -189,7 +186,7 @@ async fn handle_pkg_command(matches: &ArgMatches) -> Result<()> {
         Some(("list", _)) => {
             info!("📦 Available packages:");
             let packages = pkg_manager.list_packages();
-            
+
             if packages.is_empty() {
                 println!("No packages found.");
             } else {
@@ -205,13 +202,15 @@ async fn handle_pkg_command(matches: &ArgMatches) -> Result<()> {
                 }
             }
         }
-        
+
         Some(("create", sub_matches)) => {
             let name = sub_matches.get_one::<String>("name").unwrap();
-            let path = sub_matches.get_one::<String>("path").map(std::path::PathBuf::from);
-            
+            let path = sub_matches
+                .get_one::<String>("path")
+                .map(std::path::PathBuf::from);
+
             info!("🔨 Creating package: {}", name);
-            
+
             match pkg_manager.create_package(name, path) {
                 Ok(pkg) => {
                     info!("✅ Package created successfully!");
@@ -224,37 +223,37 @@ async fn handle_pkg_command(matches: &ArgMatches) -> Result<()> {
                 }
             }
         }
-        
+
         Some(("info", sub_matches)) => {
             let name = sub_matches.get_one::<String>("name").unwrap();
-            
+
             if let Some(pkg) = pkg_manager.get_package(name) {
                 println!("📋 Package Information:");
                 println!("  Name: {}", pkg.manifest.name);
                 println!("  Version: {}", pkg.manifest.version);
                 println!("  Path: {}", pkg.root_path.display());
-                
+
                 if let Some(ref desc) = pkg.manifest.description {
                     println!("  Description: {}", desc);
                 }
-                
+
                 if let Some(ref author) = pkg.manifest.author {
                     println!("  Author: {}", author);
                 }
-                
+
                 if let Some(ref license) = pkg.manifest.license {
                     println!("  License: {}", license);
                 }
 
                 println!("  Python Support: {}", pkg.manifest.python_support);
-                
+
                 if !pkg.manifest.dependencies.is_empty() {
                     println!("  Dependencies:");
                     for dep in &pkg.manifest.dependencies {
                         println!("    - {}", dep);
                     }
                 }
-                
+
                 if !pkg.manifest.executables.is_empty() {
                     println!("  Executables:");
                     for (name, info) in &pkg.manifest.executables {
@@ -272,7 +271,7 @@ async fn handle_pkg_command(matches: &ArgMatches) -> Result<()> {
                         }
                     }
                 }
-                
+
                 if !pkg.manifest.launch_files.is_empty() {
                     println!("  Launch Files:");
                     for (name, path) in &pkg.manifest.launch_files {
@@ -281,10 +280,13 @@ async fn handle_pkg_command(matches: &ArgMatches) -> Result<()> {
                 }
             } else {
                 error!("Package '{}' not found", name);
-                return Err(MiniRosError::ConfigError(format!("Package '{}' not found", name)));
+                return Err(MiniRosError::ConfigError(format!(
+                    "Package '{}' not found",
+                    name
+                )));
             }
         }
-        
+
         _ => {
             println!("Use 'mini_ros pkg --help' for usage information");
         }
@@ -297,7 +299,7 @@ async fn handle_pkg_command(matches: &ArgMatches) -> Result<()> {
 async fn handle_run_command(matches: &ArgMatches) -> Result<()> {
     let package_name = matches.get_one::<String>("package").unwrap();
     let executable_name = matches.get_one::<String>("executable").unwrap();
-    
+
     info!("🏃 Running: {} {}", package_name, executable_name);
 
     // Initialize package manager
@@ -307,13 +309,22 @@ async fn handle_run_command(matches: &ArgMatches) -> Result<()> {
 
     // Create a simple launch config for single executable
     let mut launch_config = LaunchConfig::new(&format!("{} {}", package_name, executable_name));
-    
+
     // Find the package and executable
-    let pkg = pkg_manager.get_package(package_name)
-        .ok_or_else(|| MiniRosError::ConfigError(format!("Package '{}' not found", package_name)))?;
-    
-    let exec_info = pkg.manifest.executables.get(executable_name)
-        .ok_or_else(|| MiniRosError::ConfigError(format!("Executable '{}' not found in package '{}'", executable_name, package_name)))?;
+    let pkg = pkg_manager.get_package(package_name).ok_or_else(|| {
+        MiniRosError::ConfigError(format!("Package '{}' not found", package_name))
+    })?;
+
+    let exec_info = pkg
+        .manifest
+        .executables
+        .get(executable_name)
+        .ok_or_else(|| {
+            MiniRosError::ConfigError(format!(
+                "Executable '{}' not found in package '{}'",
+                executable_name, package_name
+            ))
+        })?;
 
     // Create node launch config
     let node_config = NodeLaunchConfig {
@@ -321,7 +332,11 @@ async fn handle_run_command(matches: &ArgMatches) -> Result<()> {
         package: Some(package_name.to_string()),
         executable: if exec_info.python {
             // For Python executables, run the script directly
-            pkg.root_path.join(&exec_info.path).to_str().unwrap().to_string()
+            pkg.root_path
+                .join(&exec_info.path)
+                .to_str()
+                .unwrap()
+                .to_string()
         } else {
             // For Rust executables, use cargo run
             executable_name.to_string()
@@ -338,11 +353,11 @@ async fn handle_run_command(matches: &ArgMatches) -> Result<()> {
 
     // Create launch manager and start
     let mut launch_manager = LaunchManager::new();
-    
+
     // Handle Ctrl+C gracefully
     let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
     let running_clone = running.clone();
-    
+
     tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
         info!("📡 Received Ctrl+C, stopping...");
@@ -359,7 +374,7 @@ async fn handle_run_command(matches: &ArgMatches) -> Result<()> {
 
     // Stop the node
     launch_manager.stop_all().await?;
-    
+
     info!("🏁 Run completed");
     Ok(())
-} 
+}

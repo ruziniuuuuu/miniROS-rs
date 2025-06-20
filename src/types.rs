@@ -124,8 +124,9 @@ impl TypeRegistry {
                     .map_err(|e| MiniRosError::Custom(format!("Invalid Twist message: {}", e)))?;
             }
             "Odometry" => {
-                let _: OdometryMessage = bincode::deserialize(data)
-                    .map_err(|e| MiniRosError::Custom(format!("Invalid Odometry message: {}", e)))?;
+                let _: OdometryMessage = bincode::deserialize(data).map_err(|e| {
+                    MiniRosError::Custom(format!("Invalid Odometry message: {}", e))
+                })?;
             }
             _ => {
                 return Err(MiniRosError::Custom(format!(
@@ -542,7 +543,8 @@ impl MiniRosMessage for TwistMessage {
         }
 
         // Validate angular velocity
-        if !self.angular.x.is_finite() || !self.angular.y.is_finite() || !self.angular.z.is_finite() {
+        if !self.angular.x.is_finite() || !self.angular.y.is_finite() || !self.angular.z.is_finite()
+        {
             return Err(MiniRosError::Custom(
                 "Angular velocity components must be finite".to_string(),
             ));
@@ -586,7 +588,7 @@ pub struct OdometryMessage {
 
 impl MiniRosMessage for OdometryMessage {
     fn message_type() -> &'static str {
-        "Odometry"  
+        "Odometry"
     }
 
     fn schema() -> MessageSchema {
@@ -600,7 +602,7 @@ impl MiniRosMessage for OdometryMessage {
                     description: Some("Robot pose (position and orientation)".to_string()),
                 },
                 MessageField {
-                    name: "twist".to_string(), 
+                    name: "twist".to_string(),
                     field_type: FieldType::Struct("Twist".to_string()),
                     required: true,
                     description: Some("Robot velocity (linear and angular)".to_string()),

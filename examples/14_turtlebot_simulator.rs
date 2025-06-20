@@ -11,17 +11,17 @@
 //! ```bash
 //! # Terminal 1: Start simulator
 //! cargo run --example 14_turtlebot_simulator --features visualization
-//! 
+//!
 //! # Terminal 2: Start teleop
 //! cargo run --example 13_turtlebot_teleop
 //! ```
 
 use mini_ros::prelude::*;
-use mini_ros::types::{TwistMessage, OdometryMessage, Vector3, Point3D, Quaternion, Header};
+use mini_ros::types::{Header, OdometryMessage, Point3D, Quaternion, TwistMessage, Vector3};
 use mini_ros::visualization::VisualizationClient;
 use std::f32::consts::PI;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tokio::time::{sleep, Instant};
+use tokio::time::{Instant, sleep};
 use tracing::{info, warn};
 
 #[cfg(feature = "visualization")]
@@ -33,14 +33,14 @@ pub struct TurtlebotSimulator {
     node: Node,
     cmd_vel_sub: Subscriber<TwistMessage>,
     odom_pub: Publisher<OdometryMessage>,
-    
+
     // Robot state
     x: f32,
     y: f32,
     theta: f32,
     linear_vel: f32,
     angular_vel: f32,
-    
+
     // Simulation parameters
     #[allow(dead_code)]
     dt: f32,
@@ -48,11 +48,11 @@ pub struct TurtlebotSimulator {
     max_acceleration: f32,
     #[allow(dead_code)]
     max_angular_acceleration: f32,
-    
+
     // Visualization
     #[cfg(feature = "visualization")]
     viz_client: Option<VisualizationClient>,
-    
+
     // Path tracking
     path_points: Vec<[f32; 2]>,
     last_update: Instant,
@@ -75,7 +75,7 @@ impl TurtlebotSimulator {
                 application_id: "turtlebot_simulator".to_string(),
                 spawn_viewer: true,
             };
-            
+
             match VisualizationClient::new(config) {
                 Ok(client) => {
                     info!("📊 Rerun visualization initialized");
@@ -110,7 +110,7 @@ impl TurtlebotSimulator {
     /// Start simulation loop
     pub async fn start_simulation(&mut self) -> Result<()> {
         info!("🚀 Starting turtlebot simulator");
-        
+
         #[cfg(feature = "visualization")]
         {
             if let Some(ref viz) = self.viz_client {
@@ -160,7 +160,10 @@ impl TurtlebotSimulator {
             let mut state = velocity_clone.lock().unwrap();
             state.0 = twist.linear.x;
             state.1 = twist.angular.z;
-            info!("📡 Received cmd_vel: linear={:.2}, angular={:.2}", state.0, state.1);
+            info!(
+                "📡 Received cmd_vel: linear={:.2}, angular={:.2}",
+                state.0, state.1
+            );
         })?;
 
         Ok(())
@@ -190,11 +193,12 @@ impl TurtlebotSimulator {
         self.theta = self.normalize_angle(self.theta);
 
         // Add to path for visualization
-        if self.path_points.is_empty() || 
-           (self.x - self.path_points.last().unwrap()[0]).abs() > 0.05 ||
-           (self.y - self.path_points.last().unwrap()[1]).abs() > 0.05 {
+        if self.path_points.is_empty()
+            || (self.x - self.path_points.last().unwrap()[0]).abs() > 0.05
+            || (self.y - self.path_points.last().unwrap()[1]).abs() > 0.05
+        {
             self.path_points.push([self.x, self.y]);
-            
+
             // Limit path length
             if self.path_points.len() > 1000 {
                 self.path_points.remove(0);
@@ -257,11 +261,7 @@ impl TurtlebotSimulator {
     #[cfg(feature = "visualization")]
     fn setup_visualization_scene(&self, viz: &VisualizationClient) -> Result<()> {
         // Log coordinate system
-        viz.log_transform(
-            "world",
-            [0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        )?;
+        viz.log_transform("world", [0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0])?;
 
         // Log ground plane
         let ground_points = vec![
@@ -294,7 +294,8 @@ impl TurtlebotSimulator {
 
         // Log robot path
         if self.path_points.len() > 1 {
-            let path_3d: Vec<[f32; 3]> = self.path_points
+            let path_3d: Vec<[f32; 3]> = self
+                .path_points
                 .iter()
                 .map(|p| [p[0], p[1], 0.02])
                 .collect();
@@ -305,11 +306,11 @@ impl TurtlebotSimulator {
         if self.linear_vel.abs() > 0.01 || self.angular_vel.abs() > 0.01 {
             let vel_end_x = self.x + self.linear_vel * self.theta.cos() * 0.5;
             let vel_end_y = self.y + self.linear_vel * self.theta.sin() * 0.5;
-            
-            viz.log_points("world/velocity", vec![
-                [self.x, self.y, 0.15],
-                [vel_end_x, vel_end_y, 0.15],
-            ])?;
+
+            viz.log_points(
+                "world/velocity",
+                vec![[self.x, self.y, 0.15], [vel_end_x, vel_end_y, 0.15]],
+            )?;
         }
 
         // Log telemetry
@@ -327,10 +328,15 @@ impl TurtlebotSimulator {
         static mut COUNTER: u32 = 0;
         unsafe {
             COUNTER += 1;
-            if COUNTER % 25 == 0 { // Print every 0.5 seconds
+            if COUNTER % 25 == 0 {
+                // Print every 0.5 seconds
                 info!(
                     "🤖 Robot: pos=({:.2}, {:.2}), θ={:.1}°, vel=({:.2}, {:.2})",
-                    self.x, self.y, self.theta.to_degrees(), self.linear_vel, self.angular_vel
+                    self.x,
+                    self.y,
+                    self.theta.to_degrees(),
+                    self.linear_vel,
+                    self.angular_vel
                 );
             }
         }
@@ -358,14 +364,16 @@ async fn main() -> Result<()> {
 
     #[cfg(not(feature = "visualization"))]
     {
-        warn!("⚠️  Visualization not enabled. Run with: cargo run --example 14_turtlebot_simulator --features visualization");
+        warn!(
+            "⚠️  Visualization not enabled. Run with: cargo run --example 14_turtlebot_simulator --features visualization"
+        );
     }
 
     let mut simulator = TurtlebotSimulator::new("turtlebot_simulator").await?;
-    
+
     // Start simulation
     simulator.start_simulation().await?;
 
     info!("🏁 Turtlebot simulator finished");
     Ok(())
-} 
+}

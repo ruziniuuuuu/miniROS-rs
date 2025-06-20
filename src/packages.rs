@@ -3,7 +3,7 @@
 //! Provides package management functionality for organizing miniROS code.
 //! Enables creating reusable packages with executables, libraries, and launch files.
 
-use crate::{Result, MiniRosError};
+use crate::{MiniRosError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -79,7 +79,7 @@ impl Package {
             name: name.to_string(),
             ..PackageManifest::default()
         };
-        
+
         Self {
             manifest,
             root_path,
@@ -90,7 +90,7 @@ impl Package {
     pub fn load_from_dir<P: AsRef<Path>>(path: P) -> Result<Self> {
         let root_path = path.as_ref().to_path_buf();
         let manifest_path = root_path.join("package.yaml");
-        
+
         if !manifest_path.exists() {
             return Err(MiniRosError::ConfigError(format!(
                 "Package manifest not found at: {}",
@@ -98,11 +98,13 @@ impl Package {
             )));
         }
 
-        let content = std::fs::read_to_string(&manifest_path)
-            .map_err(|e| MiniRosError::ConfigError(format!("Failed to read package manifest: {}", e)))?;
-        
-        let manifest: PackageManifest = serde_yaml::from_str(&content)
-            .map_err(|e| MiniRosError::ConfigError(format!("Failed to parse package manifest: {}", e)))?;
+        let content = std::fs::read_to_string(&manifest_path).map_err(|e| {
+            MiniRosError::ConfigError(format!("Failed to read package manifest: {}", e))
+        })?;
+
+        let manifest: PackageManifest = serde_yaml::from_str(&content).map_err(|e| {
+            MiniRosError::ConfigError(format!("Failed to parse package manifest: {}", e))
+        })?;
 
         Ok(Self {
             manifest,
@@ -113,12 +115,13 @@ impl Package {
     /// Save package manifest
     pub fn save_manifest(&self) -> Result<()> {
         let manifest_path = self.root_path.join("package.yaml");
-        let content = serde_yaml::to_string(&self.manifest)
-            .map_err(|e| MiniRosError::ConfigError(format!("Failed to serialize manifest: {}", e)))?;
-        
+        let content = serde_yaml::to_string(&self.manifest).map_err(|e| {
+            MiniRosError::ConfigError(format!("Failed to serialize manifest: {}", e))
+        })?;
+
         std::fs::write(&manifest_path, content)
             .map_err(|e| MiniRosError::ConfigError(format!("Failed to write manifest: {}", e)))?;
-        
+
         Ok(())
     }
 
@@ -137,39 +140,39 @@ impl Package {
 
     /// Add launch file to package
     pub fn add_launch_file(&mut self, name: &str, path: &str) -> &mut Self {
-        self.manifest.launch_files.insert(name.to_string(), path.to_string());
+        self.manifest
+            .launch_files
+            .insert(name.to_string(), path.to_string());
         self
     }
 
     /// Get executable path
     pub fn get_executable_path(&self, name: &str) -> Option<PathBuf> {
-        self.manifest.executables.get(name).map(|info| {
-            self.root_path.join(&info.path)
-        })
+        self.manifest
+            .executables
+            .get(name)
+            .map(|info| self.root_path.join(&info.path))
     }
 
     /// Get launch file path
     pub fn get_launch_file_path(&self, name: &str) -> Option<PathBuf> {
-        self.manifest.launch_files.get(name).map(|path| {
-            self.root_path.join(path)
-        })
+        self.manifest
+            .launch_files
+            .get(name)
+            .map(|path| self.root_path.join(path))
     }
 
     /// Initialize package directory structure
     pub fn init_structure(&self) -> Result<()> {
         // Create basic directory structure
-        let dirs = [
-            "src",
-            "launch", 
-            "config",
-            "scripts",
-        ];
+        let dirs = ["src", "launch", "config", "scripts"];
 
         for dir in &dirs {
             let dir_path = self.root_path.join(dir);
             if !dir_path.exists() {
-                std::fs::create_dir_all(&dir_path)
-                    .map_err(|e| MiniRosError::ConfigError(format!("Failed to create directory {}: {}", dir, e)))?;
+                std::fs::create_dir_all(&dir_path).map_err(|e| {
+                    MiniRosError::ConfigError(format!("Failed to create directory {}: {}", dir, e))
+                })?;
             }
         }
 
@@ -189,10 +192,14 @@ impl Package {
             let readme_content = format!(
                 "# {}\n\n{}\n\n## Usage\n\n```bash\n# Run examples\ncargo run --example <example_name>\n```\n",
                 self.manifest.name,
-                self.manifest.description.as_deref().unwrap_or("A miniROS package")
+                self.manifest
+                    .description
+                    .as_deref()
+                    .unwrap_or("A miniROS package")
             );
-            std::fs::write(&readme_path, readme_content)
-                .map_err(|e| MiniRosError::ConfigError(format!("Failed to create README: {}", e)))?;
+            std::fs::write(&readme_path, readme_content).map_err(|e| {
+                MiniRosError::ConfigError(format!("Failed to create README: {}", e))
+            })?;
         }
 
         // Create Cargo.toml if it's a Rust package
@@ -212,8 +219,9 @@ tracing = "0.1"
                 self.manifest.name.replace("-", "_"),
                 self.manifest.version
             );
-            std::fs::write(&cargo_path, cargo_content)
-                .map_err(|e| MiniRosError::ConfigError(format!("Failed to create Cargo.toml: {}", e)))?;
+            std::fs::write(&cargo_path, cargo_content).map_err(|e| {
+                MiniRosError::ConfigError(format!("Failed to create Cargo.toml: {}", e))
+            })?;
         }
 
         Ok(())
@@ -238,11 +246,11 @@ impl PackageManager {
     /// Create new package manager
     pub fn new() -> Self {
         let mut search_paths = Vec::new();
-        
+
         // Default search paths
         search_paths.push(PathBuf::from("packages"));
         search_paths.push(PathBuf::from("../packages"));
-        
+
         // Add from environment variable
         if let Ok(paths) = std::env::var("MINI_ROS_PACKAGE_PATH") {
             for path in paths.split(':') {
@@ -265,23 +273,34 @@ impl PackageManager {
     /// Discover packages in search paths
     pub fn discover_packages(&mut self) -> Result<()> {
         info!("🔍 Discovering packages...");
-        
+
         for search_path in &self.search_paths {
             if !search_path.exists() {
                 continue;
             }
 
-            let entries = std::fs::read_dir(search_path)
-                .map_err(|e| MiniRosError::ConfigError(format!("Failed to read directory {}: {}", search_path.display(), e)))?;
+            let entries = std::fs::read_dir(search_path).map_err(|e| {
+                MiniRosError::ConfigError(format!(
+                    "Failed to read directory {}: {}",
+                    search_path.display(),
+                    e
+                ))
+            })?;
 
             for entry in entries {
-                let entry = entry.map_err(|e| MiniRosError::ConfigError(format!("Failed to read directory entry: {}", e)))?;
+                let entry = entry.map_err(|e| {
+                    MiniRosError::ConfigError(format!("Failed to read directory entry: {}", e))
+                })?;
                 let path = entry.path();
 
                 if path.is_dir() {
                     match Package::load_from_dir(&path) {
                         Ok(package) => {
-                            info!("📦 Found package: {} at {}", package.manifest.name, path.display());
+                            info!(
+                                "📦 Found package: {} at {}",
+                                package.manifest.name,
+                                path.display()
+                            );
                             self.packages.insert(package.manifest.name.clone(), package);
                         }
                         Err(_) => {
@@ -308,14 +327,13 @@ impl PackageManager {
 
     /// Create new package
     pub fn create_package(&mut self, name: &str, path: Option<PathBuf>) -> Result<&Package> {
-        let package_path = path.unwrap_or_else(|| {
-            PathBuf::from("packages").join(name)
-        });
+        let package_path = path.unwrap_or_else(|| PathBuf::from("packages").join(name));
 
         // Create directory if it doesn't exist
         if !package_path.exists() {
-            std::fs::create_dir_all(&package_path)
-                .map_err(|e| MiniRosError::ConfigError(format!("Failed to create package directory: {}", e)))?;
+            std::fs::create_dir_all(&package_path).map_err(|e| {
+                MiniRosError::ConfigError(format!("Failed to create package directory: {}", e))
+            })?;
         }
 
         let package = Package::new(name, package_path);
@@ -342,20 +360,21 @@ impl PackageManager {
     /// Install built-in packages
     pub fn install_builtin_packages(&mut self) -> Result<()> {
         info!("📦 Installing built-in packages...");
-        
+
         // Create turtlebot package
         let turtlebot_path = PathBuf::from("packages/turtlebot");
         let mut turtlebot = Package::new("turtlebot", turtlebot_path.clone());
-        
-        turtlebot.manifest.description = Some("Turtlebot simulation and control package".to_string());
+
+        turtlebot.manifest.description =
+            Some("Turtlebot simulation and control package".to_string());
         turtlebot.manifest.author = Some("miniROS Team".to_string());
-        
+
         // Add executables
         turtlebot.add_executable("controller", "src/controller.rs", false);
         turtlebot.add_executable("teleop", "src/teleop.rs", false);
         turtlebot.add_executable("simulator", "src/simulator.rs", false);
         turtlebot.add_executable("py_controller", "scripts/controller.py", true);
-        
+
         // Add launch files
         turtlebot.add_launch_file("simulation", "launch/simulation.yaml");
         turtlebot.add_launch_file("teleop", "launch/teleop.yaml");
@@ -367,8 +386,8 @@ impl PackageManager {
         }
 
         self.packages.insert("turtlebot".to_string(), turtlebot);
-        
+
         info!("✅ Built-in packages installed");
         Ok(())
     }
-} 
+}
