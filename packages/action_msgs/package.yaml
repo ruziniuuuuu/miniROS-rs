@@ -1,0 +1,46 @@
+name: action_msgs
+version: "1.0.0"
+description: "Action system message definitions for miniROS - compatible with ROS2 action_msgs"
+author: "miniROS Team"
+license: "MIT OR Apache-2.0"
+dependencies: ["std_msgs"]
+python_support: true
+message_package: true
+
+messages:
+  GoalInfo:
+    description: "Goal identification information for action system"
+    fields:
+      - name: "goal_id"
+        type: "string"
+        description: "Unique identifier for this goal"
+      - name: "stamp"
+        type: "int64"
+        description: "Timestamp when goal was created (nanoseconds since epoch)"
+  
+  GoalStatus:
+    description: "Status information for a single goal"
+    fields:
+      - name: "goal_info"
+        type: "action_msgs/GoalInfo"
+        description: "Goal identification information"
+      - name: "status"
+        type: "int8"
+        description: "Status code (0=UNKNOWN, 1=ACCEPTED, 2=EXECUTING, 3=CANCELING, 4=SUCCEEDED, 5=CANCELED, 6=ABORTED)"
+  
+  GoalStatusArray:
+    description: "Array of goal status messages"
+    fields:
+      - name: "status_list"
+        type: "action_msgs/GoalStatus[]"
+        description: "Array of individual goal statuses"
+
+# Status code constants
+constants:
+  STATUS_UNKNOWN: 0
+  STATUS_ACCEPTED: 1
+  STATUS_EXECUTING: 2
+  STATUS_CANCELING: 3
+  STATUS_SUCCEEDED: 4
+  STATUS_CANCELED: 5
+  STATUS_ABORTED: 6 

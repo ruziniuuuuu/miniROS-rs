@@ -30,6 +30,8 @@ A **lightweight, high-performance** ROS2-compatible middleware implementation in
 - **geometry_msgs** - Geometric types (Point, Pose, Twist, Quaternion, etc.)
 - **nav_msgs** - Navigation types (Odometry, Path, OccupancyGrid)
 - **sensor_msgs** - Sensor types (LaserScan, PointCloud2, Image, IMU)
+- **action_msgs** - Action system types (GoalInfo, GoalStatus, GoalStatusArray)
+- **diagnostic_msgs** - System diagnostics (DiagnosticStatus, DiagnosticArray, KeyValue)
 - **Full ROS2 Compatibility** - Drop-in replacement for ROS2 message types
 
 ### Package & Launch System
@@ -45,7 +47,7 @@ A **lightweight, high-performance** ROS2-compatible middleware implementation in
 #### Rust API - ROS2 Compatible Messages
 ```rust
 use mini_ros::prelude::*;
-use mini_ros::types::{std_msgs, geometry_msgs, nav_msgs};
+use mini_ros::types::{std_msgs, geometry_msgs, nav_msgs, sensor_msgs, diagnostic_msgs};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -64,15 +66,27 @@ async fn main() -> Result<()> {
         angular: geometry_msgs::Vector3 { x: 0.0, y: 0.0, z: 1.0 },
     };
 
-    // Navigation messages
-    let odom = nav_msgs::Odometry {
+    // Sensor messages for perception
+    let laser_scan = sensor_msgs::LaserScan {
         header: std_msgs::Header { 
             stamp: get_current_time_ns(),
-            frame_id: "odom".to_string() 
+            frame_id: "laser".to_string() 
         },
-        child_frame_id: "base_link".to_string(),
-        pose: geometry_msgs::PoseWithCovariance { /* ... */ },
-        twist: geometry_msgs::TwistWithCovariance { /* ... */ },
+        angle_min: -1.57,
+        angle_max: 1.57,
+        angle_increment: 0.01,
+        ranges: vec![1.0, 1.1, 1.2, 1.3],
+        intensities: vec![],
+        // ... other fields
+    };
+
+    // Diagnostic messages for system monitoring
+    let diagnostic = diagnostic_msgs::DiagnosticStatus {
+        level: diagnostic_msgs::OK,
+        name: "Motor Controller".to_string(),
+        message: "Operating normally".to_string(),
+        hardware_id: "motor_001".to_string(),
+        values: vec![],
     };
 
     Ok(())

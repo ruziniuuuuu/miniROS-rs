@@ -1,0 +1,55 @@
+name: diagnostic_msgs
+version: "1.0.0"
+description: "System diagnostic message definitions for miniROS - compatible with ROS2 diagnostic_msgs"
+author: "miniROS Team"
+license: "MIT OR Apache-2.0"
+dependencies: ["std_msgs"]
+python_support: true
+message_package: true
+
+messages:
+  KeyValue:
+    description: "Key-value pair for diagnostic data"
+    fields:
+      - name: "key"
+        type: "string"
+        description: "Parameter name"
+      - name: "value"
+        type: "string"
+        description: "Parameter value"
+  
+  DiagnosticStatus:
+    description: "Status information for a single diagnostic item"
+    fields:
+      - name: "level"
+        type: "uint8"
+        description: "Severity level (0=OK, 1=WARN, 2=ERROR, 3=STALE)"
+      - name: "name"
+        type: "string"
+        description: "Component name (e.g., 'Motor Controller')"
+      - name: "message"
+        type: "string"
+        description: "Human-readable status message"
+      - name: "hardware_id"
+        type: "string"
+        description: "Hardware identifier"
+      - name: "values"
+        type: "diagnostic_msgs/KeyValue[]"
+        description: "Key-value pairs for diagnostic data"
+  
+  DiagnosticArray:
+    description: "Array of diagnostic status messages"
+    fields:
+      - name: "header"
+        type: "std_msgs/Header"
+        description: "Header with timestamp and frame info"
+      - name: "status"
+        type: "diagnostic_msgs/DiagnosticStatus[]"
+        description: "Array of diagnostic status messages"
+
+# Diagnostic level constants
+constants:
+  OK: 0
+  WARN: 1
+  ERROR: 2
+  STALE: 3 
