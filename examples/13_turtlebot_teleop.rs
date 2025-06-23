@@ -100,14 +100,14 @@ impl TurtlebotTeleop {
     async fn publish_velocity(&self, linear_x: f32, angular_z: f32) -> Result<()> {
         let twist = TwistMessage {
             linear: Vector3 {
-                x: linear_x,
+                x: linear_x as f64,
                 y: 0.0,
                 z: 0.0,
             },
             angular: Vector3 {
                 x: 0.0,
                 y: 0.0,
-                z: angular_z,
+                z: angular_z as f64,
             },
         };
 

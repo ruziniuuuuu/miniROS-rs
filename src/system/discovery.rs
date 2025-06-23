@@ -1,6 +1,6 @@
 //! Node and service discovery for MiniROS
 
-use crate::error::{MiniRosError, Result};
+use crate::core::error::{MiniRosError, Result};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 

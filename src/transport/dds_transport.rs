@@ -4,8 +4,8 @@
 //! that maintains compatibility with ROS2's communication patterns while keeping
 //! the implementation minimal and focused on core functionality.
 
-use crate::error::{MiniRosError, Result};
-use crate::message::Message;
+use crate::core::error::{MiniRosError, Result};
+use crate::core::message::Message;
 
 use crossbeam_channel::{Receiver, unbounded};
 use serde::{Deserialize, Serialize};
@@ -416,7 +416,7 @@ impl DdsTransport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::message::StringMsg;
+    use crate::core::message::StringMsg;
 
     #[tokio::test]
     async fn test_dds_transport_creation() {

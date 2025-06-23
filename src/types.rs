@@ -3,7 +3,7 @@
 //! Provides type-safe message definitions and cross-language serialization
 //! compatible with both Rust and Python interfaces. Organized into ROS2-compatible packages.
 
-use crate::error::{MiniRosError, Result};
+use crate::core::error::{MiniRosError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -249,7 +249,7 @@ pub mod std_msgs {
     /// Standard header with timestamp and frame info
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Header {
-        pub stamp: i64,    // nanoseconds since epoch
+        pub stamp: i64, // nanoseconds since epoch
         pub frame_id: std::string::String,
     }
 
@@ -329,7 +329,9 @@ pub mod geometry_msgs {
 
         fn validate(&self) -> Result<()> {
             if !self.x.is_finite() || !self.y.is_finite() || !self.z.is_finite() {
-                return Err(MiniRosError::Custom("Point coordinates must be finite".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Point coordinates must be finite".to_string(),
+                ));
             }
             Ok(())
         }
@@ -377,7 +379,9 @@ pub mod geometry_msgs {
 
         fn validate(&self) -> Result<()> {
             if !self.x.is_finite() || !self.y.is_finite() || !self.z.is_finite() {
-                return Err(MiniRosError::Custom("Vector3 components must be finite".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Vector3 components must be finite".to_string(),
+                ));
             }
             Ok(())
         }
@@ -432,14 +436,22 @@ pub mod geometry_msgs {
 
         fn validate(&self) -> Result<()> {
             // Check if components are finite
-            if !self.x.is_finite() || !self.y.is_finite() || !self.z.is_finite() || !self.w.is_finite() {
-                return Err(MiniRosError::Custom("Quaternion components must be finite".to_string()));
+            if !self.x.is_finite()
+                || !self.y.is_finite()
+                || !self.z.is_finite()
+                || !self.w.is_finite()
+            {
+                return Err(MiniRosError::Custom(
+                    "Quaternion components must be finite".to_string(),
+                ));
             }
 
             // Check normalization
             let norm = (self.x.powi(2) + self.y.powi(2) + self.z.powi(2) + self.w.powi(2)).sqrt();
             if (norm - 1.0).abs() > 0.1 {
-                return Err(MiniRosError::Custom("Quaternion must be normalized".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Quaternion must be normalized".to_string(),
+                ));
             }
 
             Ok(())
@@ -563,22 +575,26 @@ pub mod geometry_msgs {
             self.angular.validate()?;
 
             // Safety limits for typical robots
-            const MAX_LINEAR_VEL: f64 = 2.0;  // 2 m/s max
+            const MAX_LINEAR_VEL: f64 = 2.0; // 2 m/s max
             const MAX_ANGULAR_VEL: f64 = 4.0; // 4 rad/s max
 
-            if self.linear.x.abs() > MAX_LINEAR_VEL 
-                || self.linear.y.abs() > MAX_LINEAR_VEL 
-                || self.linear.z.abs() > MAX_LINEAR_VEL {
+            if self.linear.x.abs() > MAX_LINEAR_VEL
+                || self.linear.y.abs() > MAX_LINEAR_VEL
+                || self.linear.z.abs() > MAX_LINEAR_VEL
+            {
                 return Err(MiniRosError::Custom(format!(
-                    "Linear velocity too high (max: {} m/s)", MAX_LINEAR_VEL
+                    "Linear velocity too high (max: {} m/s)",
+                    MAX_LINEAR_VEL
                 )));
             }
 
-            if self.angular.x.abs() > MAX_ANGULAR_VEL 
-                || self.angular.y.abs() > MAX_ANGULAR_VEL 
-                || self.angular.z.abs() > MAX_ANGULAR_VEL {
+            if self.angular.x.abs() > MAX_ANGULAR_VEL
+                || self.angular.y.abs() > MAX_ANGULAR_VEL
+                || self.angular.z.abs() > MAX_ANGULAR_VEL
+            {
                 return Err(MiniRosError::Custom(format!(
-                    "Angular velocity too high (max: {} rad/s)", MAX_ANGULAR_VEL
+                    "Angular velocity too high (max: {} rad/s)",
+                    MAX_ANGULAR_VEL
                 )));
             }
 
@@ -612,7 +628,9 @@ pub mod geometry_msgs {
                         name: "covariance".to_string(),
                         field_type: FieldType::FixedArray(Box::new(FieldType::Float64), 36),
                         required: true,
-                        description: Some("Row-major representation of 6x6 covariance matrix".to_string()),
+                        description: Some(
+                            "Row-major representation of 6x6 covariance matrix".to_string(),
+                        ),
                     },
                 ],
                 version: "1.0".to_string(),
@@ -623,11 +641,15 @@ pub mod geometry_msgs {
             self.pose.validate()?;
             // Check covariance matrix size and values
             if self.covariance.len() != 36 {
-                return Err(MiniRosError::Custom("Covariance matrix must have exactly 36 elements (6x6)".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Covariance matrix must have exactly 36 elements (6x6)".to_string(),
+                ));
             }
             for &val in &self.covariance {
                 if !val.is_finite() {
-                    return Err(MiniRosError::Custom("Covariance values must be finite".to_string()));
+                    return Err(MiniRosError::Custom(
+                        "Covariance values must be finite".to_string(),
+                    ));
                 }
             }
             Ok(())
@@ -660,7 +682,9 @@ pub mod geometry_msgs {
                         name: "covariance".to_string(),
                         field_type: FieldType::FixedArray(Box::new(FieldType::Float64), 36),
                         required: true,
-                        description: Some("Row-major representation of 6x6 covariance matrix".to_string()),
+                        description: Some(
+                            "Row-major representation of 6x6 covariance matrix".to_string(),
+                        ),
                     },
                 ],
                 version: "1.0".to_string(),
@@ -671,11 +695,15 @@ pub mod geometry_msgs {
             self.twist.validate()?;
             // Check covariance matrix size and values
             if self.covariance.len() != 36 {
-                return Err(MiniRosError::Custom("Covariance matrix must have exactly 36 elements (6x6)".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Covariance matrix must have exactly 36 elements (6x6)".to_string(),
+                ));
             }
             for &val in &self.covariance {
                 if !val.is_finite() {
-                    return Err(MiniRosError::Custom("Covariance values must be finite".to_string()));
+                    return Err(MiniRosError::Custom(
+                        "Covariance values must be finite".to_string(),
+                    ));
                 }
             }
             Ok(())
@@ -717,17 +745,23 @@ pub mod nav_msgs {
                         name: "child_frame_id".to_string(),
                         field_type: FieldType::String,
                         required: true,
-                        description: Some("Frame id of the child frame (usually base_link)".to_string()),
+                        description: Some(
+                            "Frame id of the child frame (usually base_link)".to_string(),
+                        ),
                     },
                     MessageField {
                         name: "pose".to_string(),
-                        field_type: FieldType::Struct("geometry_msgs/PoseWithCovariance".to_string()),
+                        field_type: FieldType::Struct(
+                            "geometry_msgs/PoseWithCovariance".to_string(),
+                        ),
                         required: true,
                         description: Some("Pose of the robot with uncertainty".to_string()),
                     },
                     MessageField {
                         name: "twist".to_string(),
-                        field_type: FieldType::Struct("geometry_msgs/TwistWithCovariance".to_string()),
+                        field_type: FieldType::Struct(
+                            "geometry_msgs/TwistWithCovariance".to_string(),
+                        ),
                         required: true,
                         description: Some("Velocity of the robot with uncertainty".to_string()),
                     },
@@ -767,7 +801,9 @@ pub mod nav_msgs {
                     },
                     MessageField {
                         name: "poses".to_string(),
-                        field_type: FieldType::Array(Box::new(FieldType::Struct("geometry_msgs/PoseStamped".to_string()))),
+                        field_type: FieldType::Array(Box::new(FieldType::Struct(
+                            "geometry_msgs/PoseStamped".to_string(),
+                        ))),
                         required: true,
                         description: Some("Path as sequence of poses".to_string()),
                     },
@@ -778,7 +814,9 @@ pub mod nav_msgs {
 
         fn validate(&self) -> Result<()> {
             if self.poses.len() > 10000 {
-                return Err(MiniRosError::Custom("Path too long (>10000 poses)".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Path too long (>10000 poses)".to_string(),
+                ));
             }
             for pose in &self.poses {
                 pose.validate()?;
@@ -914,7 +952,9 @@ impl MiniRosMessage for PointCloudMessage {
             fields: vec![
                 MessageField {
                     name: "points".to_string(),
-                    field_type: FieldType::Array(Box::new(FieldType::Struct("geometry_msgs/Point".to_string()))),
+                    field_type: FieldType::Array(Box::new(FieldType::Struct(
+                        "geometry_msgs/Point".to_string(),
+                    ))),
                     required: true,
                     description: Some("Array of 3D points".to_string()),
                 },
@@ -1009,10 +1049,11 @@ impl TypeRegistry {
                 let _: geometry_msgs::Pose = bincode::deserialize(data)
                     .map_err(|e| MiniRosError::Custom(format!("Invalid Pose message: {}", e)))?;
             }
-            // nav_msgs  
+            // nav_msgs
             "nav_msgs/Odometry" => {
-                let _: nav_msgs::Odometry = bincode::deserialize(data)
-                    .map_err(|e| MiniRosError::Custom(format!("Invalid Odometry message: {}", e)))?;
+                let _: nav_msgs::Odometry = bincode::deserialize(data).map_err(|e| {
+                    MiniRosError::Custom(format!("Invalid Odometry message: {}", e))
+                })?;
             }
             "nav_msgs/Path" => {
                 let _: nav_msgs::Path = bincode::deserialize(data)
@@ -1020,12 +1061,14 @@ impl TypeRegistry {
             }
             // sensor_msgs
             "sensor_msgs/LaserScan" => {
-                let _: sensor_msgs::LaserScan = bincode::deserialize(data)
-                    .map_err(|e| MiniRosError::Custom(format!("Invalid LaserScan message: {}", e)))?;
+                let _: sensor_msgs::LaserScan = bincode::deserialize(data).map_err(|e| {
+                    MiniRosError::Custom(format!("Invalid LaserScan message: {}", e))
+                })?;
             }
             "sensor_msgs/PointCloud2" => {
-                let _: sensor_msgs::PointCloud2 = bincode::deserialize(data)
-                    .map_err(|e| MiniRosError::Custom(format!("Invalid PointCloud2 message: {}", e)))?;
+                let _: sensor_msgs::PointCloud2 = bincode::deserialize(data).map_err(|e| {
+                    MiniRosError::Custom(format!("Invalid PointCloud2 message: {}", e))
+                })?;
             }
             "sensor_msgs/Imu" => {
                 let _: sensor_msgs::Imu = bincode::deserialize(data)
@@ -1037,13 +1080,16 @@ impl TypeRegistry {
             }
             // action_msgs
             "action_msgs/GoalStatus" => {
-                let _: action_msgs::GoalStatus = bincode::deserialize(data)
-                    .map_err(|e| MiniRosError::Custom(format!("Invalid GoalStatus message: {}", e)))?;
+                let _: action_msgs::GoalStatus = bincode::deserialize(data).map_err(|e| {
+                    MiniRosError::Custom(format!("Invalid GoalStatus message: {}", e))
+                })?;
             }
             // diagnostic_msgs
             "diagnostic_msgs/DiagnosticArray" => {
-                let _: diagnostic_msgs::DiagnosticArray = bincode::deserialize(data)
-                    .map_err(|e| MiniRosError::Custom(format!("Invalid DiagnosticArray message: {}", e)))?;
+                let _: diagnostic_msgs::DiagnosticArray =
+                    bincode::deserialize(data).map_err(|e| {
+                        MiniRosError::Custom(format!("Invalid DiagnosticArray message: {}", e))
+                    })?;
             }
             // Legacy support
             "String" => {
@@ -1055,8 +1101,9 @@ impl TypeRegistry {
                     .map_err(|e| MiniRosError::Custom(format!("Invalid Twist message: {}", e)))?;
             }
             "Odometry" => {
-                let _: OdometryMessage = bincode::deserialize(data)
-                    .map_err(|e| MiniRosError::Custom(format!("Invalid Odometry message: {}", e)))?;
+                let _: OdometryMessage = bincode::deserialize(data).map_err(|e| {
+                    MiniRosError::Custom(format!("Invalid Odometry message: {}", e))
+                })?;
             }
             _ => {
                 return Err(MiniRosError::Custom(format!(
@@ -1194,16 +1241,32 @@ mod tests {
     #[test]
     fn test_geometry_msgs_twist_validation() {
         let twist = geometry_msgs::Twist {
-            linear: geometry_msgs::Vector3 { x: 0.5, y: 0.0, z: 0.0 },
-            angular: geometry_msgs::Vector3 { x: 0.0, y: 0.0, z: 1.0 },
+            linear: geometry_msgs::Vector3 {
+                x: 0.5,
+                y: 0.0,
+                z: 0.0,
+            },
+            angular: geometry_msgs::Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         };
 
         assert!(twist.validate().is_ok());
 
         // Test velocity limits
         let bad_twist = geometry_msgs::Twist {
-            linear: geometry_msgs::Vector3 { x: 10.0, y: 0.0, z: 0.0 }, // Too fast
-            angular: geometry_msgs::Vector3 { x: 0.0, y: 0.0, z: 0.0 },
+            linear: geometry_msgs::Vector3 {
+                x: 10.0,
+                y: 0.0,
+                z: 0.0,
+            }, // Too fast
+            angular: geometry_msgs::Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
         };
 
         assert!(bad_twist.validate().is_err());
@@ -1337,7 +1400,11 @@ mod tests {
         assert!(registry.get_schema("nav_msgs/Odometry").is_some());
         assert!(registry.get_schema("sensor_msgs/LaserScan").is_some());
         assert!(registry.get_schema("action_msgs/GoalStatus").is_some());
-        assert!(registry.get_schema("diagnostic_msgs/DiagnosticArray").is_some());
+        assert!(
+            registry
+                .get_schema("diagnostic_msgs/DiagnosticArray")
+                .is_some()
+        );
         assert!(registry.get_schema("NonexistentType").is_none());
     }
 
@@ -1354,13 +1421,16 @@ mod tests {
 
         // Should be the same type (StringMessage is a type alias for std_msgs::String)
         assert_eq!(legacy_string.data, std_string.data);
-        assert_eq!(StringMessage::message_type(), std_msgs::String::message_type());
+        assert_eq!(
+            StringMessage::message_type(),
+            std_msgs::String::message_type()
+        );
     }
 
     #[test]
     fn test_message_serialization_roundtrip() {
         // Test various message types for serialization/deserialization
-        
+
         // LaserScan
         let laser_scan = sensor_msgs::LaserScan {
             header: std_msgs::Header {
@@ -1377,11 +1447,11 @@ mod tests {
             ranges: vec![1.0, 2.0, 3.0],
             intensities: vec![],
         };
-        
+
         let bytes = laser_scan.to_bytes().unwrap();
         let restored = sensor_msgs::LaserScan::from_bytes(&bytes).unwrap();
         assert_eq!(laser_scan.ranges, restored.ranges);
-        
+
         // DiagnosticArray
         let diagnostic_array = diagnostic_msgs::DiagnosticArray {
             header: std_msgs::Header {
@@ -1396,7 +1466,7 @@ mod tests {
                 values: vec![],
             }],
         };
-        
+
         let bytes = diagnostic_array.to_bytes().unwrap();
         let restored = diagnostic_msgs::DiagnosticArray::from_bytes(&bytes).unwrap();
         assert_eq!(diagnostic_array.status.len(), restored.status.len());
@@ -1455,7 +1525,9 @@ pub mod sensor_msgs {
                         name: "angle_increment".to_string(),
                         field_type: FieldType::Float32,
                         required: true,
-                        description: Some("Angular distance between measurements [rad]".to_string()),
+                        description: Some(
+                            "Angular distance between measurements [rad]".to_string(),
+                        ),
                     },
                     MessageField {
                         name: "time_increment".to_string(),
@@ -1485,13 +1557,17 @@ pub mod sensor_msgs {
                         name: "ranges".to_string(),
                         field_type: FieldType::Array(Box::new(FieldType::Float32)),
                         required: true,
-                        description: Some("Range data [m] (NaN for invalid measurements)".to_string()),
+                        description: Some(
+                            "Range data [m] (NaN for invalid measurements)".to_string(),
+                        ),
                     },
                     MessageField {
                         name: "intensities".to_string(),
                         field_type: FieldType::Array(Box::new(FieldType::Float32)),
                         required: false,
-                        description: Some("Intensity data (optional, same length as ranges)".to_string()),
+                        description: Some(
+                            "Intensity data (optional, same length as ranges)".to_string(),
+                        ),
                     },
                 ],
                 version: "1.0".to_string(),
@@ -1501,17 +1577,23 @@ pub mod sensor_msgs {
         fn validate(&self) -> Result<()> {
             // Check angle range
             if self.angle_min >= self.angle_max {
-                return Err(MiniRosError::Custom("angle_min must be less than angle_max".to_string()));
+                return Err(MiniRosError::Custom(
+                    "angle_min must be less than angle_max".to_string(),
+                ));
             }
 
             // Check angle increment
             if self.angle_increment <= 0.0 {
-                return Err(MiniRosError::Custom("angle_increment must be positive".to_string()));
+                return Err(MiniRosError::Custom(
+                    "angle_increment must be positive".to_string(),
+                ));
             }
 
             // Check time values
             if self.time_increment < 0.0 || self.scan_time <= 0.0 {
-                return Err(MiniRosError::Custom("time values must be positive".to_string()));
+                return Err(MiniRosError::Custom(
+                    "time values must be positive".to_string(),
+                ));
             }
 
             // Check range limits
@@ -1521,12 +1603,16 @@ pub mod sensor_msgs {
 
             // Check data size limits
             if self.ranges.len() > 10000 {
-                return Err(MiniRosError::Custom("Too many range measurements (>10000)".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Too many range measurements (>10000)".to_string(),
+                ));
             }
 
             // If intensities exist, check they match ranges
             if !self.intensities.is_empty() && self.intensities.len() != self.ranges.len() {
-                return Err(MiniRosError::Custom("Intensities length must match ranges length".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Intensities length must match ranges length".to_string(),
+                ));
             }
 
             Ok(())
@@ -1536,10 +1622,10 @@ pub mod sensor_msgs {
     /// Point field descriptor for PointCloud2
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct PointField {
-        pub name: std::string::String,  // Name of field
-        pub offset: u32,                // Offset from start of point struct
-        pub datatype: u8,               // Datatype enumeration (see constants)
-        pub count: u32,                 // How many elements in the field
+        pub name: std::string::String, // Name of field
+        pub offset: u32,               // Offset from start of point struct
+        pub datatype: u8,              // Datatype enumeration (see constants)
+        pub count: u32,                // How many elements in the field
     }
 
     impl MiniRosMessage for PointField {
@@ -1585,14 +1671,14 @@ pub mod sensor_msgs {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct PointCloud2 {
         pub header: crate::types::std_msgs::Header,
-        pub height: u32,                // Height of point cloud (1 for unordered)
-        pub width: u32,                 // Width of point cloud (total points for unordered)
-        pub fields: Vec<PointField>,    // Describes the channels and their layout
-        pub is_bigendian: bool,         // Is this data bigendian?
-        pub point_step: u32,            // Length of a point in bytes
-        pub row_step: u32,              // Length of a row in bytes
-        pub data: Vec<u8>,              // Actual point data
-        pub is_dense: bool,             // True if there are no invalid points
+        pub height: u32,             // Height of point cloud (1 for unordered)
+        pub width: u32,              // Width of point cloud (total points for unordered)
+        pub fields: Vec<PointField>, // Describes the channels and their layout
+        pub is_bigendian: bool,      // Is this data bigendian?
+        pub point_step: u32,         // Length of a point in bytes
+        pub row_step: u32,           // Length of a row in bytes
+        pub data: Vec<u8>,           // Actual point data
+        pub is_dense: bool,          // True if there are no invalid points
     }
 
     impl MiniRosMessage for PointCloud2 {
@@ -1624,7 +1710,9 @@ pub mod sensor_msgs {
                     },
                     MessageField {
                         name: "fields".to_string(),
-                        field_type: FieldType::Array(Box::new(FieldType::Struct("sensor_msgs/PointField".to_string()))),
+                        field_type: FieldType::Array(Box::new(FieldType::Struct(
+                            "sensor_msgs/PointField".to_string(),
+                        ))),
                         required: true,
                         description: Some("Describes the channels and their layout".to_string()),
                     },
@@ -1666,24 +1754,32 @@ pub mod sensor_msgs {
         fn validate(&self) -> Result<()> {
             // Check dimensions
             if self.height == 0 || self.width == 0 {
-                return Err(MiniRosError::Custom("Point cloud dimensions must be positive".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Point cloud dimensions must be positive".to_string(),
+                ));
             }
 
             // Check data size limits
             let total_points = self.height * self.width;
             if total_points > 1_000_000 {
-                return Err(MiniRosError::Custom("Point cloud too large (>1M points)".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Point cloud too large (>1M points)".to_string(),
+                ));
             }
 
             // Check step sizes
             if self.point_step == 0 || self.row_step == 0 {
-                return Err(MiniRosError::Custom("Step sizes must be positive".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Step sizes must be positive".to_string(),
+                ));
             }
 
             // Check data size consistency
             let expected_size = (self.row_step * self.height) as usize;
             if self.data.len() != expected_size {
-                return Err(MiniRosError::Custom("Data size doesn't match expected size".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Data size doesn't match expected size".to_string(),
+                ));
             }
 
             Ok(())
@@ -1695,7 +1791,7 @@ pub mod sensor_msgs {
     pub struct Imu {
         pub header: crate::types::std_msgs::Header,
         pub orientation: crate::types::geometry_msgs::Quaternion,
-        pub orientation_covariance: Vec<f64>,     // 3x3 covariance matrix (9 elements)
+        pub orientation_covariance: Vec<f64>, // 3x3 covariance matrix (9 elements)
         pub angular_velocity: crate::types::geometry_msgs::Vector3,
         pub angular_velocity_covariance: Vec<f64>, // 3x3 covariance matrix (9 elements)
         pub linear_acceleration: crate::types::geometry_msgs::Vector3,
@@ -1766,19 +1862,27 @@ pub mod sensor_msgs {
 
             // Check covariance matrix sizes
             if self.orientation_covariance.len() != 9 {
-                return Err(MiniRosError::Custom("Orientation covariance must have 9 elements (3x3)".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Orientation covariance must have 9 elements (3x3)".to_string(),
+                ));
             }
             if self.angular_velocity_covariance.len() != 9 {
-                return Err(MiniRosError::Custom("Angular velocity covariance must have 9 elements (3x3)".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Angular velocity covariance must have 9 elements (3x3)".to_string(),
+                ));
             }
             if self.linear_acceleration_covariance.len() != 9 {
-                return Err(MiniRosError::Custom("Linear acceleration covariance must have 9 elements (3x3)".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Linear acceleration covariance must have 9 elements (3x3)".to_string(),
+                ));
             }
 
             // Check for finite values in covariance matrices
             for &val in &self.orientation_covariance {
                 if !val.is_finite() {
-                    return Err(MiniRosError::Custom("Covariance values must be finite".to_string()));
+                    return Err(MiniRosError::Custom(
+                        "Covariance values must be finite".to_string(),
+                    ));
                 }
             }
 
@@ -1790,12 +1894,12 @@ pub mod sensor_msgs {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Image {
         pub header: crate::types::std_msgs::Header,
-        pub height: u32,                // Image height (pixels)
-        pub width: u32,                 // Image width (pixels)
+        pub height: u32,                   // Image height (pixels)
+        pub width: u32,                    // Image width (pixels)
         pub encoding: std::string::String, // Encoding of pixels (mono8, rgb8, bgr8, etc.)
-        pub is_bigendian: u8,           // Is data bigendian?
-        pub step: u32,                  // Full row length in bytes
-        pub data: Vec<u8>,              // Actual image data
+        pub is_bigendian: u8,              // Is data bigendian?
+        pub step: u32,                     // Full row length in bytes
+        pub data: Vec<u8>,                 // Actual image data
     }
 
     impl MiniRosMessage for Image {
@@ -1857,38 +1961,49 @@ pub mod sensor_msgs {
         fn validate(&self) -> Result<()> {
             // Check image dimensions
             if self.height == 0 || self.width == 0 {
-                return Err(MiniRosError::Custom("Image dimensions must be positive".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Image dimensions must be positive".to_string(),
+                ));
             }
 
             // Check reasonable size limits
             if self.height > 4096 || self.width > 4096 {
-                return Err(MiniRosError::Custom("Image too large (max 4096x4096)".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Image too large (max 4096x4096)".to_string(),
+                ));
             }
 
             // Check step size
             if self.step == 0 {
-                return Err(MiniRosError::Custom("Step size must be positive".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Step size must be positive".to_string(),
+                ));
             }
 
             // Check data size
             let expected_size = (self.step * self.height) as usize;
             if self.data.len() != expected_size {
-                return Err(MiniRosError::Custom("Data size doesn't match expected size".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Data size doesn't match expected size".to_string(),
+                ));
             }
 
             // Validate encoding format
             match self.encoding.as_str() {
-                "mono8" | "mono16" | "rgb8" | "rgba8" | "bgr8" | "bgra8" | 
-                "rgb16" | "rgba16" | "bgr16" | "bgra16" | "8UC1" | "8UC3" | "8UC4" |
-                "16UC1" | "16UC3" | "16UC4" | "32FC1" | "32FC3" | "32FC4" => Ok(()),
-                _ => Err(MiniRosError::Custom(format!("Unknown image encoding: {}", self.encoding))),
+                "mono8" | "mono16" | "rgb8" | "rgba8" | "bgr8" | "bgra8" | "rgb16" | "rgba16"
+                | "bgr16" | "bgra16" | "8UC1" | "8UC3" | "8UC4" | "16UC1" | "16UC3" | "16UC4"
+                | "32FC1" | "32FC3" | "32FC4" => Ok(()),
+                _ => Err(MiniRosError::Custom(format!(
+                    "Unknown image encoding: {}",
+                    self.encoding
+                ))),
             }
         }
     }
 }
 
 // ============================================================================
-// action_msgs package - Action system message types  
+// action_msgs package - Action system message types
 // ============================================================================
 pub mod action_msgs {
     use super::*;
@@ -1896,8 +2011,8 @@ pub mod action_msgs {
     /// Goal info for action system
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct GoalInfo {
-        pub goal_id: std::string::String,     // Unique identifier for this goal
-        pub stamp: i64,                       // Timestamp when goal was created
+        pub goal_id: std::string::String, // Unique identifier for this goal
+        pub stamp: i64,                   // Timestamp when goal was created
     }
 
     impl MiniRosMessage for GoalInfo {
@@ -1940,7 +2055,7 @@ pub mod action_msgs {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct GoalStatus {
         pub goal_info: GoalInfo,
-        pub status: i8,                       // Status code (see constants above)
+        pub status: i8, // Status code (see constants above)
     }
 
     impl MiniRosMessage for GoalStatus {
@@ -1972,9 +2087,12 @@ pub mod action_msgs {
         fn validate(&self) -> Result<()> {
             // Check valid status codes
             match self.status {
-                STATUS_UNKNOWN | STATUS_ACCEPTED | STATUS_EXECUTING | 
-                STATUS_CANCELING | STATUS_SUCCEEDED | STATUS_CANCELED | STATUS_ABORTED => Ok(()),
-                _ => Err(MiniRosError::Custom(format!("Invalid status code: {}", self.status))),
+                STATUS_UNKNOWN | STATUS_ACCEPTED | STATUS_EXECUTING | STATUS_CANCELING
+                | STATUS_SUCCEEDED | STATUS_CANCELED | STATUS_ABORTED => Ok(()),
+                _ => Err(MiniRosError::Custom(format!(
+                    "Invalid status code: {}",
+                    self.status
+                ))),
             }
         }
     }
@@ -1993,21 +2111,23 @@ pub mod action_msgs {
         fn schema() -> MessageSchema {
             MessageSchema {
                 name: "action_msgs/GoalStatusArray".to_string(),
-                fields: vec![
-                    MessageField {
-                        name: "status_list".to_string(),
-                        field_type: FieldType::Array(Box::new(FieldType::Struct("action_msgs/GoalStatus".to_string()))),
-                        required: true,
-                        description: Some("Array of goal statuses".to_string()),
-                    },
-                ],
+                fields: vec![MessageField {
+                    name: "status_list".to_string(),
+                    field_type: FieldType::Array(Box::new(FieldType::Struct(
+                        "action_msgs/GoalStatus".to_string(),
+                    ))),
+                    required: true,
+                    description: Some("Array of goal statuses".to_string()),
+                }],
                 version: "1.0".to_string(),
             }
         }
 
         fn validate(&self) -> Result<()> {
             if self.status_list.len() > 1000 {
-                return Err(MiniRosError::Custom("Too many goals in status array (>1000)".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Too many goals in status array (>1000)".to_string(),
+                ));
             }
 
             for status in &self.status_list {
@@ -2034,8 +2154,8 @@ pub mod diagnostic_msgs {
     /// Key-value pair for diagnostic data
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct KeyValue {
-        pub key: std::string::String,    // Parameter name
-        pub value: std::string::String,  // Parameter value
+        pub key: std::string::String,   // Parameter name
+        pub value: std::string::String, // Parameter value
     }
 
     impl MiniRosMessage for KeyValue {
@@ -2068,11 +2188,11 @@ pub mod diagnostic_msgs {
     /// Status information for a single diagnostic item
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct DiagnosticStatus {
-        pub level: u8,                          // Severity level (see constants)
-        pub name: std::string::String,          // Component name (e.g., "Motor Controller")
-        pub message: std::string::String,       // Human-readable status message
-        pub hardware_id: std::string::String,   // Hardware identifier
-        pub values: Vec<KeyValue>,              // Key-value pairs for diagnostic data
+        pub level: u8,                        // Severity level (see constants)
+        pub name: std::string::String,        // Component name (e.g., "Motor Controller")
+        pub message: std::string::String,     // Human-readable status message
+        pub hardware_id: std::string::String, // Hardware identifier
+        pub values: Vec<KeyValue>,            // Key-value pairs for diagnostic data
     }
 
     impl MiniRosMessage for DiagnosticStatus {
@@ -2110,7 +2230,9 @@ pub mod diagnostic_msgs {
                     },
                     MessageField {
                         name: "values".to_string(),
-                        field_type: FieldType::Array(Box::new(FieldType::Struct("diagnostic_msgs/KeyValue".to_string()))),
+                        field_type: FieldType::Array(Box::new(FieldType::Struct(
+                            "diagnostic_msgs/KeyValue".to_string(),
+                        ))),
                         required: true,
                         description: Some("Key-value pairs for diagnostic data".to_string()),
                     },
@@ -2123,12 +2245,17 @@ pub mod diagnostic_msgs {
             // Check valid level
             match self.level {
                 OK | WARN | ERROR | STALE => Ok(()),
-                _ => Err(MiniRosError::Custom(format!("Invalid diagnostic level: {}", self.level))),
+                _ => Err(MiniRosError::Custom(format!(
+                    "Invalid diagnostic level: {}",
+                    self.level
+                ))),
             }?;
 
             // Check reasonable limits
             if self.values.len() > 100 {
-                return Err(MiniRosError::Custom("Too many diagnostic values (>100)".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Too many diagnostic values (>100)".to_string(),
+                ));
             }
 
             Ok(())
@@ -2159,7 +2286,9 @@ pub mod diagnostic_msgs {
                     },
                     MessageField {
                         name: "status".to_string(),
-                        field_type: FieldType::Array(Box::new(FieldType::Struct("diagnostic_msgs/DiagnosticStatus".to_string()))),
+                        field_type: FieldType::Array(Box::new(FieldType::Struct(
+                            "diagnostic_msgs/DiagnosticStatus".to_string(),
+                        ))),
                         required: true,
                         description: Some("Array of diagnostic status messages".to_string()),
                     },
@@ -2170,7 +2299,9 @@ pub mod diagnostic_msgs {
 
         fn validate(&self) -> Result<()> {
             if self.status.len() > 100 {
-                return Err(MiniRosError::Custom("Too many diagnostic statuses (>100)".to_string()));
+                return Err(MiniRosError::Custom(
+                    "Too many diagnostic statuses (>100)".to_string(),
+                ));
             }
 
             for status in &self.status {

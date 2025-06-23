@@ -13,8 +13,8 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::error::Result;
-use crate::message::{Message, StringMsg};
+use crate::core::error::Result;
+use crate::core::message::{Message, StringMsg};
 use crate::{Node, Publisher, Subscriber};
 
 /// Action goal status enumeration
@@ -338,7 +338,8 @@ mod tests {
         match context.init().await {
             Ok(_) => {
                 let mut node =
-                    crate::node::Node::with_context("test_action_node", context.clone()).unwrap();
+                    crate::core::node::Node::with_context("test_action_node", context.clone())
+                        .unwrap();
                 match node.init().await {
                     Ok(_) => {
                         let server = ActionServer::new(&mut node, "test_action").await;

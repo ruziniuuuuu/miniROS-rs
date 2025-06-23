@@ -2,11 +2,11 @@
 //!
 //! Command-line interface for miniROS package and launch management.
 //! Provides ROS2-like commands for launching nodes and managing packages.
-//! 
+//!
 //! Philosophy: Keep it minimal - essential robotics functionality only.
 
 use clap::{Arg, ArgMatches, Command, ValueHint};
-use clap_complete::{generate, Generator, Shell};
+use clap_complete::{Generator, Shell, generate};
 use mini_ros::prelude::*;
 use std::env;
 use std::io;
@@ -15,7 +15,12 @@ use tracing::{error, info};
 
 /// Generate shell completions for the CLI
 fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
-    generate(generator, cmd, cmd.get_name().to_string(), &mut io::stdout());
+    generate(
+        generator,
+        cmd,
+        cmd.get_name().to_string(),
+        &mut io::stdout(),
+    );
 }
 
 /// Build CLI command structure
@@ -194,27 +199,30 @@ async fn main() {
 fn handle_completions_command(matches: &ArgMatches) -> Result<()> {
     let shell = matches.get_one::<Shell>("shell").unwrap();
     let mut cmd = build_cli();
-    
+
     info!("🔧 Generating {} completions...", shell);
     print_completions(*shell, &mut cmd);
-    
+
     Ok(())
 }
 
 /// Handle version command
 fn handle_version_command(matches: &ArgMatches) -> Result<()> {
     let verbose = matches.get_flag("verbose");
-    
+
     if verbose {
         println!("🤖 miniROS CLI v{}", env!("CARGO_PKG_VERSION"));
-        println!("📦 Built with Rust {}", env::var("RUSTC_VERSION").unwrap_or_else(|_| "unknown".to_string()));
+        println!(
+            "📦 Built with Rust {}",
+            env::var("RUSTC_VERSION").unwrap_or_else(|_| "unknown".to_string())
+        );
         println!("🏗️  Target: {}", std::env::consts::ARCH);
         println!("🔧 OS: {}", std::env::consts::OS);
         println!("💡 Philosophy: Maximum robotics performance, minimum complexity");
     } else {
         println!("miniROS CLI v{}", env!("CARGO_PKG_VERSION"));
     }
-    
+
     Ok(())
 }
 

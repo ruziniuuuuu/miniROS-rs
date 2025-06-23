@@ -3,7 +3,7 @@
 //! Provides package management functionality for organizing miniROS code.
 //! Enables creating reusable packages with executables, libraries, and launch files.
 
-use crate::{MiniRosError, Result};
+use crate::core::error::{MiniRosError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

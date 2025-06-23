@@ -4,8 +4,8 @@
 //! This is a simplified implementation that will be upgraded to full Zenoh when
 //! version compatibility issues are resolved.
 
-use crate::error::{MiniRosError, Result};
-use crate::message::Message;
+use crate::core::error::{MiniRosError, Result};
+use crate::core::message::Message;
 use crossbeam_channel::{Receiver, Sender, unbounded};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -215,7 +215,7 @@ impl<T: Message> ZenohSubscriber<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::message::StringMsg;
+    use crate::core::message::StringMsg;
 
     #[tokio::test]
     async fn test_zenoh_transport_creation() {

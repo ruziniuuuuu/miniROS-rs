@@ -8,7 +8,9 @@
 //! Run with: cargo run --example 17_new_message_types_demo
 
 use mini_ros::node::Node;
-use mini_ros::types::{sensor_msgs, action_msgs, diagnostic_msgs, std_msgs, geometry_msgs, MiniRosMessage};
+use mini_ros::types::{
+    MiniRosMessage, action_msgs, diagnostic_msgs, geometry_msgs, sensor_msgs, std_msgs,
+};
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::info;
@@ -33,21 +35,33 @@ async fn main() -> mini_ros::error::Result<()> {
     // ============================================================================
     // sensor_msgs demonstrations
     // ============================================================================
-    
+
     info!("\n🔬 Demonstrating sensor_msgs package:");
 
     // Create LaserScan publisher and subscriber
-    let laser_pub = node.create_publisher::<sensor_msgs::LaserScan>("/sensors/laser").await?;
-    let laser_sub = node.create_subscriber::<sensor_msgs::LaserScan>("/sensors/laser").await?;
+    let laser_pub = node
+        .create_publisher::<sensor_msgs::LaserScan>("/sensors/laser")
+        .await?;
+    let laser_sub = node
+        .create_subscriber::<sensor_msgs::LaserScan>("/sensors/laser")
+        .await?;
 
     laser_sub.on_message(|scan: sensor_msgs::LaserScan| {
-        info!("📡 Received LaserScan: {} ranges, angle range: {:.2} to {:.2} rad", 
-            scan.ranges.len(), scan.angle_min, scan.angle_max);
+        info!(
+            "📡 Received LaserScan: {} ranges, angle range: {:.2} to {:.2} rad",
+            scan.ranges.len(),
+            scan.angle_min,
+            scan.angle_max
+        );
     })?;
 
-    // Create IMU publisher and subscriber  
-    let imu_pub = node.create_publisher::<sensor_msgs::Imu>("/sensors/imu").await?;
-    let imu_sub = node.create_subscriber::<sensor_msgs::Imu>("/sensors/imu").await?;
+    // Create IMU publisher and subscriber
+    let imu_pub = node
+        .create_publisher::<sensor_msgs::Imu>("/sensors/imu")
+        .await?;
+    let imu_sub = node
+        .create_subscriber::<sensor_msgs::Imu>("/sensors/imu")
+        .await?;
 
     imu_sub.on_message(|imu: sensor_msgs::Imu| {
         info!("🧭 Received IMU: orientation=({:.2}, {:.2}, {:.2}, {:.2}), accel=({:.1}, {:.1}, {:.1})",
@@ -58,16 +72,20 @@ async fn main() -> mini_ros::error::Result<()> {
     // ============================================================================
     // action_msgs demonstrations
     // ============================================================================
-    
+
     info!("\n🎯 Demonstrating action_msgs package:");
 
-    let goal_status_pub = node.create_publisher::<action_msgs::GoalStatus>("/actions/goal_status").await?;
-    let goal_status_sub = node.create_subscriber::<action_msgs::GoalStatus>("/actions/goal_status").await?;
+    let goal_status_pub = node
+        .create_publisher::<action_msgs::GoalStatus>("/actions/goal_status")
+        .await?;
+    let goal_status_sub = node
+        .create_subscriber::<action_msgs::GoalStatus>("/actions/goal_status")
+        .await?;
 
     goal_status_sub.on_message(|status: action_msgs::GoalStatus| {
         let status_str = match status.status {
             action_msgs::STATUS_UNKNOWN => "UNKNOWN",
-            action_msgs::STATUS_ACCEPTED => "ACCEPTED", 
+            action_msgs::STATUS_ACCEPTED => "ACCEPTED",
             action_msgs::STATUS_EXECUTING => "EXECUTING",
             action_msgs::STATUS_CANCELING => "CANCELING",
             action_msgs::STATUS_SUCCEEDED => "SUCCEEDED",
@@ -75,20 +93,30 @@ async fn main() -> mini_ros::error::Result<()> {
             action_msgs::STATUS_ABORTED => "ABORTED",
             _ => "INVALID",
         };
-        info!("🎯 Goal '{}' status: {}", status.goal_info.goal_id, status_str);
+        info!(
+            "🎯 Goal '{}' status: {}",
+            status.goal_info.goal_id, status_str
+        );
     })?;
 
     // ============================================================================
     // diagnostic_msgs demonstrations
     // ============================================================================
-    
+
     info!("\n🔧 Demonstrating diagnostic_msgs package:");
 
-    let diag_pub = node.create_publisher::<diagnostic_msgs::DiagnosticArray>("/diagnostics").await?;
-    let diag_sub = node.create_subscriber::<diagnostic_msgs::DiagnosticArray>("/diagnostics").await?;
+    let diag_pub = node
+        .create_publisher::<diagnostic_msgs::DiagnosticArray>("/diagnostics")
+        .await?;
+    let diag_sub = node
+        .create_subscriber::<diagnostic_msgs::DiagnosticArray>("/diagnostics")
+        .await?;
 
     diag_sub.on_message(|diag_array: diagnostic_msgs::DiagnosticArray| {
-        info!("💊 Received diagnostics: {} components", diag_array.status.len());
+        info!(
+            "💊 Received diagnostics: {} components",
+            diag_array.status.len()
+        );
         for status in &diag_array.status {
             let level_str = match status.level {
                 diagnostic_msgs::OK => "OK",
@@ -106,10 +134,10 @@ async fn main() -> mini_ros::error::Result<()> {
     // ============================================================================
     // Generate and publish sample data
     // ============================================================================
-    
+
     for i in 0..5 {
         let timestamp = get_current_time_ns();
-        
+
         // Publish LaserScan data
         let mut ranges = Vec::new();
         for j in 0..360 {
@@ -148,7 +176,7 @@ async fn main() -> mini_ros::error::Result<()> {
             },
             orientation: geometry_msgs::Quaternion {
                 x: 0.0,
-                y: 0.0, 
+                y: 0.0,
                 z: (angle / 2.0).sin(),
                 w: (angle / 2.0).cos(),
             },
@@ -192,7 +220,7 @@ async fn main() -> mini_ros::error::Result<()> {
         // Publish diagnostic information
         let motor_temp = 25.0 + 10.0 * (i as f64 * 0.5).sin();
         let battery_voltage = 12.0 + 0.5 * (i as f64 * 0.3).cos();
-        
+
         let diagnostic_array = diagnostic_msgs::DiagnosticArray {
             header: std_msgs::Header {
                 stamp: timestamp,
@@ -200,7 +228,11 @@ async fn main() -> mini_ros::error::Result<()> {
             },
             status: vec![
                 diagnostic_msgs::DiagnosticStatus {
-                    level: if motor_temp > 35.0 { diagnostic_msgs::WARN } else { diagnostic_msgs::OK },
+                    level: if motor_temp > 35.0 {
+                        diagnostic_msgs::WARN
+                    } else {
+                        diagnostic_msgs::OK
+                    },
                     name: "Motor Controller".to_string(),
                     message: format!("Temperature: {:.1}°C", motor_temp),
                     hardware_id: "motor_ctrl_001".to_string(),
@@ -216,7 +248,11 @@ async fn main() -> mini_ros::error::Result<()> {
                     ],
                 },
                 diagnostic_msgs::DiagnosticStatus {
-                    level: if battery_voltage < 11.5 { diagnostic_msgs::ERROR } else { diagnostic_msgs::OK },
+                    level: if battery_voltage < 11.5 {
+                        diagnostic_msgs::ERROR
+                    } else {
+                        diagnostic_msgs::OK
+                    },
                     name: "Battery Monitor".to_string(),
                     message: format!("Voltage: {:.1}V", battery_voltage),
                     hardware_id: "battery_001".to_string(),
@@ -246,4 +282,4 @@ async fn main() -> mini_ros::error::Result<()> {
     info!("💡 All new ROS2-compatible message types are working correctly");
 
     Ok(())
-} 
+}

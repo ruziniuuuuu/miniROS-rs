@@ -1,8 +1,8 @@
 //! Subscriber implementation for MiniROS
 
-use crate::core::Context;
-use crate::error::{MiniRosError, Result};
-use crate::message::Message;
+use crate::core::context::Context;
+use crate::core::error::{MiniRosError, Result};
+use crate::core::message::Message;
 
 use crossbeam_channel::Receiver;
 use std::marker::PhantomData;
@@ -146,8 +146,8 @@ impl<T: Message> Clone for Subscriber<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::Context;
-    use crate::message::StringMsg;
+    use crate::core::context::Context;
+    use crate::core::message::StringMsg;
     use std::sync::atomic::{AtomicBool, Ordering};
 
     #[tokio::test]

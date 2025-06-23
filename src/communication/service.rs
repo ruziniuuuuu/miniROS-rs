@@ -1,8 +1,8 @@
 //! Service implementation for MiniROS
 
-use crate::core::Context;
-use crate::error::{MiniRosError, Result};
-use crate::message::Message;
+use crate::core::context::Context;
+use crate::core::error::{MiniRosError, Result};
+use crate::core::message::Message;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -160,8 +160,8 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::Context;
-    use crate::message::{Int32Msg, StringMsg};
+    use crate::core::context::Context;
+    use crate::core::message::{Int32Msg, StringMsg};
 
     #[tokio::test]
     async fn test_service_creation() {

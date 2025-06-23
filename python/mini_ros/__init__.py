@@ -253,6 +253,10 @@ if not _BINDINGS_AVAILABLE:
             return self.name
         def destroy_node(self): 
             print(f"[STUB] Destroyed node: {self.name}")
+        def create_publisher(self, msg_type, topic, qos_profile):
+            return _RustPublisher(msg_type, topic)
+        def create_subscription(self, msg_type, topic, callback, qos_profile):
+            return _RustSubscription(msg_type, topic)
     
     class _RustPublisher:
         def __init__(self, msg_type, topic):
@@ -368,7 +372,7 @@ class Node:
 
     def get_name(self) -> str:
         """Get the name of this node"""
-        return self._rust_node.get_name()
+        return self._rust_node.name
 
     def get_namespace(self) -> str:
         """Get the namespace of this node (always '/' for miniROS)"""

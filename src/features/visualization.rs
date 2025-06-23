@@ -2,7 +2,7 @@
 //!
 //! Provides data visualization capabilities using Rerun viewer.
 
-use crate::error::{MiniRosError, Result};
+use crate::core::error::{MiniRosError, Result};
 use rerun::{RecordingStream, RecordingStreamBuilder};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

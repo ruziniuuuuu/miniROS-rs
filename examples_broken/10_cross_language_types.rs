@@ -70,8 +70,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for i in 0..3 {
         let pose = PoseMessage {
             position: Point3D {
-                x: i as f32,
-                y: (i * 2) as f32,
+                x: i as f64,
+                y: (i * 2) as f64,
                 z: 0.5,
             },
             orientation: Quaternion {
@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 w: 1.0,
             }, // Valid unit quaternion
             header: Header {
-                timestamp: std::time::SystemTime::now()
+                stamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
                     .as_nanos() as i64,
@@ -118,7 +118,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             w: 1.0,
         }, // Invalid quaternion (not normalized)
         header: Header {
-            timestamp: 0,
+            stamp: 0,
             frame_id: "test".to_string(),
         },
     };
@@ -161,13 +161,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let x = angle.cos() * (i as f32 + 1.0);
             let y = angle.sin() * (i as f32 + 1.0);
             let z = 0.0;
-            points.push(Point3D { x, y, z });
+            points.push(Point3D {
+                x: x as f64,
+                y: y as f64,
+                z: z as f64,
+            });
         }
 
         let cloud = PointCloudMessage {
             points,
             header: Header {
-                timestamp: std::time::SystemTime::now()
+                stamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
                     .as_nanos() as i64,
@@ -220,7 +224,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             w: 1.0,
         },
         header: Header {
-            timestamp: 0,
+            stamp: 0,
             frame_id: "test".to_string(),
         },
     };

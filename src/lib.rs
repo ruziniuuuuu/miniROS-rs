@@ -3,50 +3,74 @@
 //! This library provides core robotics communication primitives with
 //! ROS2-compatible DDS transport layer for maximum interoperability.
 
-pub mod action;
+// Core modules
+pub mod communication;
 pub mod core;
-pub mod discovery;
-pub mod error;
-pub mod message;
-pub mod node;
-pub mod parameter;
-pub mod publisher;
-pub mod service;
-pub mod subscriber;
+pub mod system;
+pub mod transport;
 pub mod types;
 
-// Performance and benchmarking
-pub mod benchmarks;
-
-// Transport layer - DDS-based by default for ROS2 compatibility
-#[cfg(feature = "dds-transport")]
-pub mod dds_transport;
-#[cfg(feature = "tcp-transport")]
-pub mod transport;
-pub mod zenoh_transport;
-
-// Launch system for multi-node orchestration
-pub mod launch;
-pub mod packages;
-
 // Optional features
-#[cfg(feature = "python")]
-pub mod python;
-#[cfg(feature = "visualization")]
-pub mod visualization;
+pub mod features;
 
 // Re-exports for convenience
-pub use action::{ActionClient, ActionGoal, ActionResult, ActionServer, GoalStatus};
-pub use core::Context;
-pub use error::{MiniRosError, Result};
-pub use launch::{LaunchConfig, LaunchDescription, LaunchManager, NodeLaunchConfig};
-pub use message::{BoolMsg, EmptyMsg, Float64Msg, Int32Msg, Message, Stamped, StringMsg};
-pub use node::Node;
-pub use packages::{Package, PackageManager};
-pub use parameter::{ParameterClient, ParameterServer, ParameterValue};
-pub use publisher::Publisher;
-pub use service::{Service, ServiceClient};
-pub use subscriber::Subscriber;
+pub use core::{BoolMsg, EmptyMsg, Float64Msg, Int32Msg, Message, Stamped, StringMsg};
+pub use core::{Context, MiniRosError, Node, Result};
+
+pub use communication::{
+    ActionClient, ActionGoal, ActionResult, ActionServer, GoalStatus, Publisher, Service,
+    ServiceClient, Subscriber,
+};
+
+pub use system::{
+    DiscoveryService, LaunchConfig, LaunchDescription, LaunchManager, NodeLaunchConfig, Package,
+    PackageManager, ParameterClient, ParameterServer, ParameterValue,
+};
+
+// Transport layer exports based on features
+#[cfg(feature = "tcp-transport")]
+pub use transport::tcp::{MessageBroker, TcpTransport, Transport, TransportManager, UdpTransport};
+
+#[cfg(feature = "dds-transport")]
+pub use transport::DdsTransport;
+
+pub use transport::ZenohTransport;
+
+// Feature exports
+#[cfg(feature = "visualization")]
+pub use features::*;
+
+#[cfg(not(feature = "visualization"))]
+pub mod visualization {
+    //! Placeholder visualization module when feature is disabled
+    pub use crate::features::visualization::*;
+}
+
+pub use features::benchmarks::{
+    BenchmarkConfig, BenchmarkFramework, BenchmarkSuite, LatencyMetrics, PerformanceMetrics,
+    ThroughputMetrics,
+};
+
+// Re-export modules for compatibility with examples
+pub mod message {
+    pub use crate::core::message::*;
+}
+
+pub mod node {
+    pub use crate::core::node::*;
+}
+
+pub mod error {
+    pub use crate::core::error::*;
+}
+
+pub mod parameter {
+    pub use crate::system::parameter::*;
+}
+
+pub mod benchmarks {
+    pub use crate::features::benchmarks::*;
+}
 
 /// Prelude module for common imports
 pub mod prelude {
@@ -66,6 +90,6 @@ use pyo3::prelude::*;
 #[cfg(feature = "python")]
 #[pymodule]
 fn _core(_py: Python, m: &PyModule) -> PyResult<()> {
-    python::init_python_module(m)?;
+    features::python::init_python_module(m)?;
     Ok(())
 }

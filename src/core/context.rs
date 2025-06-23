@@ -1,13 +1,13 @@
 //! Core MiniROS context and configuration
 
-use crate::discovery::DiscoveryService;
-use crate::error::Result;
+use crate::core::error::Result;
+use crate::system::discovery::DiscoveryService;
 
 // Import transport based on feature flags
 #[cfg(feature = "dds-transport")]
-use crate::dds_transport::DdsTransport;
+use crate::transport::dds_transport::DdsTransport;
 #[cfg(feature = "tcp-transport")]
-use crate::transport::TransportManager;
+use crate::transport::tcp::TransportManager;
 
 use parking_lot::RwLock;
 use std::sync::Arc;

@@ -1,5 +1,5 @@
 //! Message types and serialization for MiniROS
-//! 
+//!
 //! This module provides both the generic Message trait and re-exports
 //! the structured message packages (std_msgs, geometry_msgs, nav_msgs).
 
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // Re-export the structured message packages
-pub use crate::types::{std_msgs, geometry_msgs, nav_msgs};
+pub use crate::types::{geometry_msgs, nav_msgs, std_msgs};
 
 /// Trait for all MiniROS messages
 ///
@@ -18,7 +18,7 @@ pub trait Message: Send + Sync + Serialize + for<'de> Deserialize<'de> + Clone +
 impl<T> Message for T where T: Send + Sync + Serialize + for<'de> Deserialize<'de> + Clone + 'static {}
 
 /// Standard message header containing metadata
-/// 
+///
 /// Note: This is the legacy header format. For new code, use std_msgs::Header instead.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Header {
@@ -121,9 +121,12 @@ pub struct EmptyMsg;
 // =============================================================================
 
 // Re-export common message types for convenience
-pub use std_msgs::{String as StdString, Int32 as StdInt32, Float64 as StdFloat64, Bool as StdBool, Empty as StdEmpty};
-pub use geometry_msgs::{Point, Vector3, Quaternion, Pose, Twist, PoseStamped};
+pub use geometry_msgs::{Point, Pose, PoseStamped, Quaternion, Twist, Vector3};
 pub use nav_msgs::{Odometry, Path};
+pub use std_msgs::{
+    Bool as StdBool, Empty as StdEmpty, Float64 as StdFloat64, Int32 as StdInt32,
+    String as StdString,
+};
 
 #[cfg(test)]
 mod tests {
@@ -179,7 +182,7 @@ mod tests {
         let string_msg = std_msgs::String {
             data: "Hello miniROS!".to_string(),
         };
-        
+
         let point = geometry_msgs::Point {
             x: 1.0,
             y: 2.0,
@@ -187,8 +190,16 @@ mod tests {
         };
 
         let twist = geometry_msgs::Twist {
-            linear: geometry_msgs::Vector3 { x: 0.5, y: 0.0, z: 0.0 },
-            angular: geometry_msgs::Vector3 { x: 0.0, y: 0.0, z: 1.0 },
+            linear: geometry_msgs::Vector3 {
+                x: 0.5,
+                y: 0.0,
+                z: 0.0,
+            },
+            angular: geometry_msgs::Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         };
 
         // Test message validation
@@ -205,12 +216,26 @@ mod tests {
     #[test]
     fn test_convenience_exports() {
         // Test that convenience re-exports work
-        let _string = StdString { data: "test".to_string() };
+        let _string = StdString {
+            data: "test".to_string(),
+        };
         let _int = StdInt32 { data: 42 };
-        let _point = Point { x: 0.0, y: 0.0, z: 0.0 };
+        let _point = Point {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
         let _twist = Twist {
-            linear: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
-            angular: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
+            linear: Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            angular: Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
         };
     }
 }

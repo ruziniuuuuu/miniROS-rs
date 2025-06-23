@@ -3,9 +3,9 @@
 //! Provides benchmarking capabilities for measuring and comparing miniROS performance
 //! against standard robotics middleware solutions.
 
-use crate::error::{MiniRosError, Result};
-use crate::message::StringMsg;
-use crate::node::Node;
+use crate::core::error::{MiniRosError, Result};
+use crate::core::message::StringMsg;
+use crate::core::node::Node;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};

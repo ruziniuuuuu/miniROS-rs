@@ -1,6 +1,6 @@
 //! High-performance transport layer for MiniROS
 
-use crate::error::{MiniRosError, Result};
+use crate::core::error::{MiniRosError, Result};
 
 use crossbeam_channel::{Receiver, Sender, unbounded};
 use dashmap::DashMap;

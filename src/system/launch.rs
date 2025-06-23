@@ -3,7 +3,7 @@
 //! Provides orchestration capabilities for launching multiple nodes simultaneously.
 //! Inspired by ROS2 launch but simplified for miniROS.
 
-use crate::{MiniRosError, Result};
+use crate::core::error::{MiniRosError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::process::{Child, Command, Stdio};

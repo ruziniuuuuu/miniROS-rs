@@ -13,7 +13,7 @@
 use mini_ros::{message::StringMsg, node::Node};
 
 #[cfg(feature = "dds-transport")]
-use mini_ros::dds_transport::{DdsTransport, QosPolicy, ReliabilityKind};
+use mini_ros::transport::dds_transport::{DdsTransport, QosPolicy, ReliabilityKind};
 
 use std::time::Duration;
 use tokio::time::sleep;

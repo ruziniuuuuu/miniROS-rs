@@ -3,7 +3,7 @@
 //! This module provides parameter management capabilities similar to ROS2,
 //! allowing runtime configuration of nodes and services.
 
-use crate::error::{MiniRosError, Result};
+use crate::core::error::{MiniRosError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};

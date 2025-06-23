@@ -115,32 +115,30 @@ impl Publisher {
             // Try to extract different message types
             if let Ok(string_msg) = data.extract::<PyStringMessage>(py) {
                 println!("Publishing String to {}: {}", self.topic, string_msg.data);
-            }
-            else if let Ok(int32_msg) = data.extract::<PyInt32Message>(py) {
+            } else if let Ok(int32_msg) = data.extract::<PyInt32Message>(py) {
                 println!("Publishing Int32 to {}: {}", self.topic, int32_msg.data);
-            }
-            else if let Ok(float64_msg) = data.extract::<PyFloat64Message>(py) {
+            } else if let Ok(float64_msg) = data.extract::<PyFloat64Message>(py) {
                 println!("Publishing Float64 to {}: {}", self.topic, float64_msg.data);
-            }
-            else if let Ok(bool_msg) = data.extract::<PyBoolMessage>(py) {
+            } else if let Ok(bool_msg) = data.extract::<PyBoolMessage>(py) {
                 println!("Publishing Bool to {}: {}", self.topic, bool_msg.data);
-            }
-            else if let Ok(pose_msg) = data.extract::<PyPoseMessage>(py) {
-                println!("Publishing Pose to {}: pos=[{}, {}, {}]", 
-                    self.topic, pose_msg.position.x, pose_msg.position.y, pose_msg.position.z);
-            }
-            else if let Ok(twist_msg) = data.extract::<PyTwistMessage>(py) {
-                println!("Publishing Twist to {}: linear=[{}, {}, {}]", 
-                    self.topic, twist_msg.linear.x, twist_msg.linear.y, twist_msg.linear.z);
-            }
-            else if let Ok(odometry_msg) = data.extract::<PyOdometryMessage>(py) {
-                println!("Publishing Odometry to {}: frame_id={}", 
-                    self.topic, odometry_msg.header.frame_id);
-            }
-            else if let Ok(string_data) = data.extract::<String>(py) {
+            } else if let Ok(pose_msg) = data.extract::<PyPoseMessage>(py) {
+                println!(
+                    "Publishing Pose to {}: pos=[{}, {}, {}]",
+                    self.topic, pose_msg.position.x, pose_msg.position.y, pose_msg.position.z
+                );
+            } else if let Ok(twist_msg) = data.extract::<PyTwistMessage>(py) {
+                println!(
+                    "Publishing Twist to {}: linear=[{}, {}, {}]",
+                    self.topic, twist_msg.linear.x, twist_msg.linear.y, twist_msg.linear.z
+                );
+            } else if let Ok(odometry_msg) = data.extract::<PyOdometryMessage>(py) {
+                println!(
+                    "Publishing Odometry to {}: frame_id={}",
+                    self.topic, odometry_msg.header.frame_id
+                );
+            } else if let Ok(string_data) = data.extract::<String>(py) {
                 println!("Publishing String to {}: {}", self.topic, string_data);
-            }
-            else {
+            } else {
                 println!("Publishing unknown type to {}: {:?}", self.topic, data);
             }
             Ok(())
@@ -337,7 +335,11 @@ pub struct PyPointMessage {
 impl PyPointMessage {
     #[new]
     fn new() -> Self {
-        PyPointMessage { x: 0.0, y: 0.0, z: 0.0 }
+        PyPointMessage {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
     }
 }
 
@@ -357,7 +359,11 @@ pub struct PyVector3Message {
 impl PyVector3Message {
     #[new]
     fn new() -> Self {
-        PyVector3Message { x: 0.0, y: 0.0, z: 0.0 }
+        PyVector3Message {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
     }
 }
 
@@ -379,9 +385,14 @@ pub struct PyQuaternionMessage {
 impl PyQuaternionMessage {
     #[new]
     fn new() -> Self {
-        PyQuaternionMessage { x: 0.0, y: 0.0, z: 0.0, w: 1.0 }
+        PyQuaternionMessage {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+        }
     }
-    
+
     fn normalize(&mut self) {
         let norm = (self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w).sqrt();
         if norm > 0.0 {
@@ -412,13 +423,14 @@ impl PyPoseMessage {
             orientation: PyQuaternionMessage::new(),
         }
     }
-    
+
     fn validate(&self) -> PyResult<bool> {
         // Check if quaternion is normalized
-        let norm = (self.orientation.x * self.orientation.x + 
-                   self.orientation.y * self.orientation.y + 
-                   self.orientation.z * self.orientation.z + 
-                   self.orientation.w * self.orientation.w).sqrt();
+        let norm = (self.orientation.x * self.orientation.x
+            + self.orientation.y * self.orientation.y
+            + self.orientation.z * self.orientation.z
+            + self.orientation.w * self.orientation.w)
+            .sqrt();
         Ok((norm - 1.0).abs() < 1e-6)
     }
 }
@@ -463,28 +475,30 @@ impl PyTwistMessage {
             angular: PyVector3Message::new(),
         }
     }
-    
+
     fn validate(&self) -> PyResult<bool> {
         // Check velocity limits
         let max_linear = 10.0; // m/s
-        let max_angular = 2.0 * 3.14159; // rad/s
-        
-        let linear_speed = (self.linear.x * self.linear.x + 
-                          self.linear.y * self.linear.y + 
-                          self.linear.z * self.linear.z).sqrt();
-        let angular_speed = (self.angular.x * self.angular.x + 
-                           self.angular.y * self.angular.y + 
-                           self.angular.z * self.angular.z).sqrt();
-        
+        let max_angular = 2.0 * std::f64::consts::PI; // rad/s
+
+        let linear_speed = (self.linear.x * self.linear.x
+            + self.linear.y * self.linear.y
+            + self.linear.z * self.linear.z)
+            .sqrt();
+        let angular_speed = (self.angular.x * self.angular.x
+            + self.angular.y * self.angular.y
+            + self.angular.z * self.angular.z)
+            .sqrt();
+
         Ok(linear_speed <= max_linear && angular_speed <= max_angular)
     }
-    
+
     fn set_linear_xyz(&mut self, x: f64, y: f64, z: f64) {
         self.linear.x = x;
         self.linear.y = y;
         self.linear.z = z;
     }
-    
+
     fn set_angular_xyz(&mut self, x: f64, y: f64, z: f64) {
         self.angular.x = x;
         self.angular.y = y;
@@ -521,18 +535,18 @@ impl PyOdometryMessage {
             twist: PyTwistMessage::new(),
         }
     }
-    
+
     fn get_yaw(&self) -> f64 {
         // Extract yaw from quaternion
         let q = &self.pose.orientation;
         2.0 * (q.w * q.z + q.x * q.y).atan2(1.0 - 2.0 * (q.y * q.y + q.z * q.z))
     }
-    
+
     fn set_pose_2d(&mut self, x: f64, y: f64, yaw: f64) {
         self.pose.position.x = x;
         self.pose.position.y = y;
         self.pose.position.z = 0.0;
-        
+
         let half_yaw = yaw / 2.0;
         self.pose.orientation.x = 0.0;
         self.pose.orientation.y = 0.0;
@@ -706,7 +720,7 @@ pub fn init_python_module(m: &PyModule) -> PyResult<()> {
     m.add("Float64", m.py().get_type::<PyFloat64Message>())?;
     m.add("Bool", m.py().get_type::<PyBoolMessage>())?;
     m.add("Header", m.py().get_type::<PyHeaderMessage>())?;
-    
+
     // geometry_msgs
     m.add("Point", m.py().get_type::<PyPointMessage>())?;
     m.add("Vector3", m.py().get_type::<PyVector3Message>())?;
@@ -714,7 +728,7 @@ pub fn init_python_module(m: &PyModule) -> PyResult<()> {
     m.add("Pose", m.py().get_type::<PyPoseMessage>())?;
     m.add("PoseStamped", m.py().get_type::<PyPoseStampedMessage>())?;
     m.add("Twist", m.py().get_type::<PyTwistMessage>())?;
-    
+
     // nav_msgs
     m.add("Odometry", m.py().get_type::<PyOdometryMessage>())?;
 
@@ -723,9 +737,12 @@ pub fn init_python_module(m: &PyModule) -> PyResult<()> {
     m.add("PoseMessage", m.py().get_type::<PyPoseMessage>())?;
     m.add("TwistMessage", m.py().get_type::<PyTwistMessage>())?;
     m.add("OdometryMessage", m.py().get_type::<PyOdometryMessage>())?;
-    
+
     // Visualization
-    m.add("VisualizationClient", m.py().get_type::<PyVisualizationClient>())?;
+    m.add(
+        "VisualizationClient",
+        m.py().get_type::<PyVisualizationClient>(),
+    )?;
 
     // Add utility functions
     m.add_function(wrap_pyfunction!(init, m)?)?;

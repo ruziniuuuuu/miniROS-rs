@@ -1,10 +1,10 @@
 //! Publisher implementation for MiniROS
 
-use crate::core::Context;
+use crate::core::context::Context;
 #[cfg(any(feature = "dds-transport", feature = "tcp-transport"))]
-use crate::error::MiniRosError;
-use crate::error::Result;
-use crate::message::Message;
+use crate::core::error::MiniRosError;
+use crate::core::error::Result;
+use crate::core::message::Message;
 
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -171,8 +171,8 @@ impl<T: Message> Clone for Publisher<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::Context;
-    use crate::message::StringMsg;
+    use crate::core::context::Context;
+    use crate::core::message::StringMsg;
 
     #[tokio::test]
     async fn test_publisher_creation() {

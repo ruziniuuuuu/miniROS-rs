@@ -1,12 +1,12 @@
 //! Node implementation for MiniROS
 
-use crate::core::Context;
-use crate::discovery::{NodeInfo, ServiceInfo, TopicInfo};
-use crate::error::{MiniRosError, Result};
-use crate::message::Message;
-use crate::publisher::Publisher;
-use crate::service::{Service, ServiceClient};
-use crate::subscriber::Subscriber;
+use crate::communication::publisher::Publisher;
+use crate::communication::service::{Service, ServiceClient};
+use crate::communication::subscriber::Subscriber;
+use crate::core::context::Context;
+use crate::core::error::{MiniRosError, Result};
+use crate::core::message::Message;
+use crate::system::discovery::{NodeInfo, ServiceInfo, TopicInfo};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
@@ -200,8 +200,8 @@ impl Node {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::Context;
-    use crate::message::StringMsg;
+    use crate::core::context::Context;
+    use crate::core::message::StringMsg;
 
     #[tokio::test]
     async fn test_node_creation() {
