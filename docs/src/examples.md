@@ -12,6 +12,28 @@ cd miniROS-rs
 cargo run --example 01_basic_pubsub
 ```
 
+## Message Packages
+
+### 16 - ROS2 Message Packages
+```bash
+cargo run --example 16_message_packages_demo
+```
+
+**What you'll learn**: ROS2-compatible message types
+- std_msgs, geometry_msgs, nav_msgs
+- Message validation and serialization
+- Cross-language compatibility
+
+### 17 - New Message Types  
+```bash
+cargo run --example 17_new_message_types_demo
+```
+
+**What you'll learn**: Sensor and diagnostic messages
+- sensor_msgs (LaserScan, IMU, Image)
+- action_msgs (Goal tracking)
+- diagnostic_msgs (System health)
+
 ## Core Examples (Rust)
 
 ### 01 - Basic Pub/Sub

@@ -71,34 +71,39 @@ impl<Req: Message, Res: Message> ServiceClient<Req, Res> {
 
 ## Message Types
 
-### Built-in Messages
+### ROS2-Compatible Packages
 
 ```rust
-// String message
-pub struct StringMsg {
-    pub data: String,
-}
+// std_msgs - Basic types
+use mini_ros::types::std_msgs::*;
+let msg = String { data: "Hello".to_string() };
+let num = Int32 { data: 42 };
 
-// Numeric messages
-pub struct Int32Msg {
-    pub data: i32,
-}
+// geometry_msgs - Geometric types  
+use mini_ros::types::geometry_msgs::*;
+let point = Point { x: 1.0, y: 2.0, z: 3.0 };
+let twist = Twist { linear: Vector3 { x: 1.0, y: 0.0, z: 0.0 }, angular: Vector3::default() };
 
-pub struct Float64Msg {
-    pub data: f64,
-}
+// sensor_msgs - Sensor data
+use mini_ros::types::sensor_msgs::*;
+let laser = LaserScan { /* laser data */ };
+let imu = Imu { /* IMU data */ };
 
-// Stamped message (with timestamp)
-pub struct Stamped<T> {
-    pub header: Header,
-    pub data: T,
-}
+// action_msgs - Action system
+use mini_ros::types::action_msgs::*;
+let status = GoalStatus { /* goal status */ };
 
-pub struct Header {
-    pub stamp: u64,     // Timestamp in nanoseconds
-    pub seq: u32,       // Sequence number
-    pub frame_id: String, // Reference frame
-}
+// diagnostic_msgs - System diagnostics
+use mini_ros::types::diagnostic_msgs::*;
+let diag = DiagnosticStatus { level: OK, name: "Motor".to_string(), /* ... */ };
+```
+
+### Legacy Messages
+
+```rust
+// Legacy support (still available)
+pub struct StringMsg { pub data: String }
+pub struct Header { pub stamp: i64, pub frame_id: String }
 ```
 
 ### Custom Messages
