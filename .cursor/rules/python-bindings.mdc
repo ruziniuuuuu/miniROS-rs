@@ -1,0 +1,69 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Python Bindings Guidelines
+
+## PyO3 Patterns:
+- Use `#[pyclass]` for types exposed to Python
+- Use `#[pymethods]` for methods exposed to Python
+- Handle Rust Results → Python exceptions properly
+- Use `py.allow_threads()` for blocking operations
+
+## API Compatibility:
+- Mirror `rclpy` API where possible for easy migration
+- Use pythonic naming conventions (snake_case)
+- Support Python context managers (`__enter__`/`__exit__`)
+- Provide both sync and async APIs where appropriate
+
+## Message Type Binding:
+```rust
+#[pyclass]
+pub struct StringMsg {
+    #[pyo3(get, set)]
+    pub data: String,
+}
+
+#[pymethods]
+impl StringMsg {
+    #[new]
+    pub fn new(data: String) -> Self {
+        Self { data }
+    }
+    
+    pub fn __repr__(&self) -> String {
+        format!("StringMsg(data='{}')", self.data)
+    }
+}
+```
+
+## Error Handling:
+- Convert `MiniRosError` to appropriate Python exceptions
+- Provide detailed error messages for Python users
+- Support Python-style error handling patterns
+- Use `PyResult<T>` for Python-facing functions
+
+## Memory Management:
+- Use `Py<T>` for objects shared between Python and Rust
+- Handle Python GIL properly in async contexts
+- Avoid memory leaks in long-running applications
+- Use `Clone` judiciously for Python objects
+
+## Performance Considerations:
+- Minimize Python ↔ Rust transitions
+- Use vectorized operations where possible
+- Consider NumPy integration for large data
+- Profile Python bindings separately from Rust core
+
+## Testing:
+- Test Python bindings with `pytest`
+- Include interoperability tests (Python ↔ Rust communication)
+- Test memory management and cleanup
+- Verify thread safety in Python context
+
+## Documentation:
+- Provide Python-specific documentation
+- Include type hints for all Python APIs
+- Document differences from `rclpy`
+- Provide migration examples from ROS2 Python

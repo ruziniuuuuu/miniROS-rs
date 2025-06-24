@@ -1,0 +1,59 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Transport Layer Guidelines
+
+## Transport Abstraction:
+- All transports must implement the `Transport` trait
+- Support both reliable (TCP, DDS) and unreliable (UDP) protocols
+- Handle connection lifecycle (connect, disconnect, reconnect)
+- Implement proper backpressure handling
+
+## Supported Transports:
+```rust
+pub enum TransportType {
+    Memory,    // In-process communication
+    Tcp,       // Network TCP transport
+    Udp,       // Network UDP transport
+    Dds,       // OMG DDS transport (ROS2 compatibility)
+    Zenoh,     // Zenoh transport (future)
+}
+```
+
+## Transport Implementation Pattern:
+- Async message sending/receiving
+- Configure transport options (buffer sizes, timeouts)
+- Handle network errors gracefully
+- Support both point-to-point and multicast patterns
+
+## Memory Transport:
+- Zero-copy in-process communication
+- Use channels for message passing
+- Support broadcast and point-to-point
+- No serialization needed (direct struct passing)
+
+## Network Transports:
+- Handle network partitions and failures
+- Implement connection pooling where appropriate
+- Support both IPv4 and IPv6
+- Use efficient serialization (bincode)
+
+## DDS Integration:
+- Compatible with ROS2 DDS implementations
+- Support standard DDS QoS policies
+- Handle DDS discovery properly
+- Map miniROS types to DDS types
+
+## Performance Considerations:
+- Minimize syscalls in hot paths
+- Use vectored I/O when possible
+- Implement connection reuse
+- Profile network stack overhead
+
+## Testing:
+- Test network failure scenarios
+- Verify message ordering guarantees
+- Test with high message rates
+- Cross-transport compatibility tests

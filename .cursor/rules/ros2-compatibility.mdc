@@ -1,0 +1,70 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# ROS2 Compatibility Guidelines
+
+## Message Compatibility:
+- Use exact ROS2 message field names and types
+- Support ROS2 standard message packages
+- Implement ROS2 Header format (stamp, frame_id)
+- Handle ROS2 time representation (nanoseconds since epoch)
+
+## Topic Naming:
+- Follow ROS2 topic naming conventions
+- Support namespace and remapping
+- Use forward slashes for topic hierarchies
+- Validate topic names according to ROS2 rules
+
+## Service Compatibility:
+- Implement ROS2 service request/response patterns
+- Support ROS2 service discovery
+- Handle service timeouts consistently
+- Use ROS2 service naming conventions
+
+## Action Compatibility:
+- Implement ROS2 action client/server patterns
+- Support goal, feedback, and result message types
+- Handle action state transitions correctly
+- Support action cancellation
+
+## Quality of Service (QoS):
+```rust
+pub struct QosProfile {
+    pub reliability: Reliability,    // RELIABLE, BEST_EFFORT
+    pub durability: Durability,      // VOLATILE, TRANSIENT_LOCAL
+    pub history: History,            // KEEP_LAST, KEEP_ALL
+    pub depth: u32,                  // Queue depth
+}
+```
+
+## Parameter System:
+- Support ROS2 parameter types (bool, int64, float64, string, arrays)
+- Implement parameter discovery and listing
+- Support parameter validation and constraints
+- Handle parameter updates and notifications
+
+## Node Lifecycle:
+- Implement ROS2 node lifecycle states
+- Support managed node interfaces
+- Handle node activation/deactivation
+- Support lifecycle state transitions
+
+## Discovery and Introspection:
+- Compatible with ROS2 discovery mechanisms
+- Support topic and service introspection
+- Implement node graph queries
+- Support parameter introspection
+
+## Time Handling:
+- Use ROS2 time representation (nanoseconds)
+- Support ROS time vs wall time
+- Handle time synchronization properly
+- Support clock sources and updates
+
+## DDS Interoperability:
+- Map miniROS concepts to DDS concepts
+- Support standard DDS vendors (FastDDS, CycloneDX, RTI)
+- Handle DDS participant management
+- Support DDS domain configuration

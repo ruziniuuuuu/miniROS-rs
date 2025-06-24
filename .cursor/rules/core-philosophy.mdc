@@ -1,0 +1,34 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# miniROS-rs Core Philosophy
+
+You are working on miniROS-rs, a lightweight, high-performance ROS2-compatible middleware implementation in Rust.
+
+## "Mini" Philosophy - Core Principles:
+- **Focus on core functionality**: pub/sub, services, parameters, actions, and visualization
+- **Maximum performance with minimum complexity**
+- **Type-safe, async-first design**
+- **ROS2 compatibility without the bloat**
+- **Zero-allocation where possible**
+
+## Architecture Guidelines:
+- Keep modules small and focused on single responsibilities
+- Prefer composition over inheritance
+- Use traits for abstractions, structs for data
+- Async/await for all I/O operations
+- Explicit error handling with `Result<T, MiniRosError>`
+
+## Performance First:
+- Minimize allocations in hot paths
+- Use `Arc<>` and `Rc<>` judiciously for shared data
+- Prefer stack allocation over heap when possible
+- Profile before optimizing, but write efficient code from start
+
+## Code Quality:
+- Every public API must have comprehensive documentation
+- Use `#[must_use]` for methods that return important results
+- Implement `Debug`, `Clone`, `Send`, `Sync` as appropriate
+- Write tests for all public APIs and critical paths

@@ -1,0 +1,76 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Visualization Guidelines
+
+## Rerun Integration:
+- Use Rerun as the primary visualization backend
+- Support 3D visualization of robotics data
+- Integrate with miniROS message types
+- Provide real-time data streaming
+
+## Supported Visualizations:
+```rust
+// 3D geometry visualization
+pub fn visualize_pose(pose: &geometry_msgs::Pose, frame: &str);
+pub fn visualize_point_cloud(cloud: &sensor_msgs::PointCloud2);
+pub fn visualize_laser_scan(scan: &sensor_msgs::LaserScan);
+
+// Path and trajectory visualization
+pub fn visualize_path(path: &nav_msgs::Path);
+pub fn visualize_odometry(odom: &nav_msgs::Odometry);
+
+// Image and camera visualization
+pub fn visualize_image(image: &sensor_msgs::Image);
+pub fn visualize_camera_info(info: &sensor_msgs::CameraInfo);
+```
+
+## Visualization Patterns:
+- Automatic coordinate frame handling
+- Support for time-based playback
+- Color coding by data type or value
+- Interactive 3D navigation
+
+## Performance:
+- Stream data efficiently to Rerun
+- Minimize visualization overhead
+- Support data decimation for high-rate topics
+- Use appropriate data representations
+
+## Configuration:
+- Configure visualization topics via YAML
+- Support enable/disable for different data types
+- Configurable update rates
+- Custom visualization parameters
+
+## Coordinate Frames:
+- Support ROS2 TF2 frame conventions
+- Automatic frame transforms
+- Handle static and dynamic transforms
+- Visualize coordinate frame relationships
+
+## Data Types:
+- Automatic conversion from ROS2 messages
+- Support for custom message visualization
+- Handle large datasets efficiently
+- Support both 2D and 3D visualizations
+
+## User Interface:
+- Provide intuitive visualization controls
+- Support timeline scrubbing
+- Enable/disable visualization layers
+- Export visualization data
+
+## Integration:
+- Seamless integration with miniROS nodes
+- Minimal code changes to enable visualization
+- Support both C++ and Python APIs
+- Compatible with existing ROS2 visualization tools
+
+## Testing:
+- Test visualization with sample data
+- Verify coordinate frame correctness
+- Test with high-rate data streams
+- Validate visualization accuracy

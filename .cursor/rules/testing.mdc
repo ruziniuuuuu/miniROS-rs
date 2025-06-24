@@ -1,0 +1,63 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Testing Guidelines
+
+## Test Organization:
+- Unit tests in same file as code (`#[cfg(test)]` modules)
+- Integration tests in `tests/` directory
+- Examples that serve as integration tests
+- Benchmarks in `benches/` directory
+
+## Test Patterns:
+```rust
+#[tokio::test]
+async fn test_async_operation() {
+    // Arrange
+    let node = Node::new("test_node").unwrap();
+    
+    // Act
+    let result = node.some_operation().await;
+    
+    // Assert
+    assert!(result.is_ok());
+}
+```
+
+## Mock and Stub Patterns:
+- Use trait objects for mocking transport layers
+- Create test doubles for external dependencies
+- Use `tokio::test` for async tests
+- Mock time with `tokio::time::pause()`
+
+## Property-Based Testing:
+- Use `proptest` for complex data validation
+- Test message serialization round-trips
+- Validate protocol invariants
+- Test edge cases with random data
+
+## Performance Testing:
+- Benchmark critical paths
+- Test under load (high message frequency)
+- Memory usage tests (no leaks)
+- Latency and throughput measurements
+
+## Test Data:
+- Use realistic message sizes and types
+- Test with various transport configurations
+- Include failure scenarios (network errors, timeouts)
+- Test cross-language compatibility (Rust ↔ Python)
+
+## Test Documentation:
+- Clear test names that describe the scenario
+- Document complex test setups
+- Include expected vs actual behavior comments
+- Group related tests with `mod` blocks
+
+## Continuous Integration:
+- All tests must pass before merge
+- Include performance regression tests
+- Test on multiple platforms (Linux, macOS, Windows)
+- Test with different feature combinations

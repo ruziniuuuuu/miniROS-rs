@@ -1,0 +1,48 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Async Communication Patterns
+
+## Async/Await Best Practices:
+- All I/O operations must be async
+- Use `tokio` for async runtime
+- Prefer `async fn` over `impl Future`
+- Handle cancellation gracefully with `tokio::select!`
+
+## Publisher/Subscriber Patterns:
+```rust
+// Publisher: fire-and-forget, non-blocking
+pub async fn publish<T: MiniRosMessage>(&self, msg: &T) -> Result<()>
+
+// Subscriber: async stream of messages
+pub async fn next(&mut self) -> Option<Result<T>>
+```
+
+## Service Patterns:
+```rust
+// Service: request-response with timeout
+pub async fn call_service<Req, Resp>(&self, request: Req) -> Result<Resp>
+
+// Service handler: async function
+pub async fn handle_request(&self, request: Req) -> Result<Resp>
+```
+
+## Error Handling:
+- Use `Result<T, MiniRosError>` for all fallible operations
+- Implement proper timeout handling
+- Log errors appropriately (trace, debug, info, warn, error)
+- Provide meaningful error messages
+
+## Transport Layer:
+- Abstract transport behind traits
+- Support multiple transports: memory, TCP, UDP, DDS, Zenoh
+- Handle network failures gracefully
+- Implement automatic reconnection where appropriate
+
+## Concurrency:
+- Use `Arc<Mutex<>>` or `Arc<RwLock<>>` for shared mutable state
+- Prefer channels (`mpsc`, `broadcast`) for communication between tasks
+- Avoid blocking operations in async contexts
+- Use `spawn_blocking` for CPU-intensive work

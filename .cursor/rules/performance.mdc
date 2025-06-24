@@ -1,0 +1,55 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Performance Guidelines
+
+## Memory Management:
+- Avoid allocations in hot paths (publish/subscribe loops)
+- Pre-allocate buffers where possible
+- Use object pools for frequently allocated/deallocated objects
+- Prefer `Vec::with_capacity()` when size is known
+- Use `Box` only when necessary for large objects
+
+## Zero-Copy Patterns:
+```rust
+// Prefer borrowing over cloning
+pub fn process_message(msg: &MessageType) -> Result<()>
+
+// Use Arc for shared ownership without copying
+pub fn share_data(data: Arc<MessageData>) -> Result<()>
+
+// Use Cow for conditional cloning
+pub fn maybe_modify(data: Cow<str>) -> Cow<str>
+```
+
+## Serialization Performance:
+- Use `bincode` for high-performance binary serialization
+- Consider `rmp` (MessagePack) for compact representation
+- Implement custom serialization for critical paths
+- Cache serialized data when message doesn't change
+
+## Network Optimization:
+- Batch small messages when possible
+- Use compression for large payloads
+- Implement message prioritization
+- Consider UDP for high-frequency, low-latency data
+
+## Async Performance:
+- Minimize `await` points in hot paths
+- Use `yield_now()` to prevent task starvation
+- Prefer `try_recv()` over `recv().await` when appropriate
+- Use `spawn_blocking` for CPU-intensive operations
+
+## Measurement:
+- Use `std::time::Instant` for timing measurements
+- Implement benchmarks for critical paths
+- Profile with `perf` or `cargo flamegraph`
+- Set performance targets and monitor regressions
+
+## Transport Layer Optimization:
+- Use vectored I/O (`writev`/`readv`) when available
+- Implement custom buffer management
+- Consider DPDK for ultra-high performance
+- Use appropriate socket buffer sizes

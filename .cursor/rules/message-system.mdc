@@ -1,0 +1,44 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Message System Guidelines
+
+## Message Type Standards:
+- All messages must implement `MiniRosMessage` trait
+- Use ROS2-compatible message packages: `std_msgs`, `geometry_msgs`, `nav_msgs`, `sensor_msgs`, etc.
+- Follow ROS2 naming conventions: snake_case for fields, PascalCase for types
+- Include validation logic in `validate()` method
+- Provide comprehensive schema information
+
+## Serialization:
+- Use `bincode` for efficient binary serialization
+- Support both `serde_json` and `bincode` formats
+- Implement proper error handling for serialization failures
+- Consider message size limits (warn if >1MB)
+
+## Message Package Organization:
+```rust
+pub mod std_msgs {
+    // Standard primitive types
+}
+pub mod geometry_msgs {
+    // Geometric types for robotics
+}
+pub mod sensor_msgs {
+    // Sensor data types
+}
+```
+
+## Type Safety:
+- Use strong typing over primitive types where meaningful
+- Implement From/Into conversions between related types
+- Validate data ranges in message validation
+- Use const values for status codes and enums
+
+## ROS2 Compatibility:
+- Match ROS2 field names and types exactly
+- Support ROS2 Header with timestamp and frame_id
+- Implement covariance matrices as Vec<f64> with proper validation
+- Follow ROS2 conventions for optional vs required fields

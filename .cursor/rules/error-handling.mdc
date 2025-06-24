@@ -1,0 +1,48 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Error Handling Guidelines
+
+## MiniRosError Usage:
+- Use `MiniRosError` enum for all library errors
+- Provide specific error variants for different failure modes
+- Include context information in error messages
+- Implement `From` traits for common error conversions
+
+## Error Categories:
+```rust
+pub enum MiniRosError {
+    NetworkError(String),      // Communication failures
+    SerializationError(String), // Data format issues
+    ServiceNotFound(String),   // Discovery failures
+    ServiceTimeout(String),    // Timeout issues
+    ConfigError(String),       // Configuration problems
+    IoError(std::io::Error),   // File system issues
+    Custom(String),            // Application-specific errors
+}
+```
+
+## Error Propagation:
+- Use `?` operator for error propagation
+- Convert errors at module boundaries
+- Add context with `.map_err()` when helpful
+- Don't hide errors - propagate or log them
+
+## Result Types:
+- Use `Result<T, MiniRosError>` as the standard Result type
+- Return `Result<()>` for operations that don't return values
+- Use `Result<Option<T>>` for optional values that can fail
+
+## Error Messages:
+- Include operation context: "Failed to publish message to '/topic'"
+- Include relevant identifiers: service names, topic names, node names
+- Use consistent formatting across the codebase
+- Avoid exposing internal implementation details
+
+## Logging:
+- Log errors at appropriate levels
+- Use structured logging with key-value pairs
+- Include correlation IDs for distributed tracing
+- Don't spam logs with expected failures

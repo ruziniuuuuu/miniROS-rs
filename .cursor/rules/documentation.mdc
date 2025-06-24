@@ -1,0 +1,75 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Documentation Guidelines
+
+## API Documentation:
+- Every public item must have comprehensive rustdoc comments
+- Include examples for non-trivial functions
+- Document panic conditions with `# Panics`
+- Document error conditions with `# Errors`
+- Use `# Safety` for unsafe functions
+
+## Documentation Format:
+```rust
+/// Creates a new publisher for the specified topic.
+///
+/// This function establishes a publisher that can send messages of type `T`
+/// to the given topic. The publisher uses the configured transport layer
+/// for message delivery.
+///
+/// # Arguments
+///
+/// * `topic` - The topic name to publish to (must start with '/')
+/// * `qos` - Quality of service settings for the publisher
+///
+/// # Returns
+///
+/// A `Publisher<T>` instance that can be used to send messages.
+///
+/// # Errors
+///
+/// Returns `MiniRosError::ConfigError` if the topic name is invalid.
+/// Returns `MiniRosError::NetworkError` if transport initialization fails.
+///
+/// # Examples
+///
+/// ```rust
+/// let pub = node.create_publisher::<StringMsg>("/chatter").await?;
+/// let msg = StringMsg { data: "Hello".to_string() };
+/// pub.publish(&msg).await?;
+/// ```
+pub async fn create_publisher<T>(&self, topic: &str) -> Result<Publisher<T>>
+```
+
+## Module Documentation:
+- Each module should have a module-level doc comment
+- Explain the module's purpose and main concepts
+- Include architecture diagrams where helpful
+- Link to related modules and external resources
+
+## Example Code:
+- All examples must compile and run successfully
+- Include progressive examples (basic → advanced)
+- Focus on common use cases
+- Show error handling patterns
+
+## Book Documentation:
+- Use `mdbook` for comprehensive documentation
+- Include tutorials for common workflows
+- Document architecture decisions and trade-offs
+- Provide migration guides from ROS2
+
+## Code Comments:
+- Explain "why" not "what" in code comments
+- Document complex algorithms and data structures
+- Include references to papers or standards
+- Use TODO/FIXME/NOTE comments appropriately
+
+## README Standards:
+- Clear project description and value proposition
+- Quick start guide with working examples
+- Feature overview with current status
+- Contributing guidelines and development setup

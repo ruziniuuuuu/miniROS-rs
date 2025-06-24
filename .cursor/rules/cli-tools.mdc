@@ -1,0 +1,70 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# CLI Tools Guidelines
+
+## Command Structure:
+- Use `clap` for command-line argument parsing
+- Follow standard CLI conventions (--help, --version)
+- Support both short and long option formats
+- Provide clear error messages and usage information
+
+## miniROS CLI Commands:
+```bash
+mini_ros pkg list                    # List available packages
+mini_ros pkg info <package>         # Show package information
+mini_ros run <package> <executable> # Run package executable
+mini_ros launch <package> <file>    # Launch system from file
+mini_ros topic list                 # List active topics
+mini_ros service list               # List available services
+```
+
+## Package Management:
+- Support package discovery and loading
+- Validate package manifests
+- Handle package dependencies
+- Support both local and system packages
+
+## Launch System:
+- Parse YAML launch files
+- Support parameter substitution
+- Handle node lifecycle management
+- Provide launch file validation
+
+## Debugging and Introspection:
+- List running nodes
+- Show topic/service information
+- Monitor message flow
+- Display performance metrics
+
+## Configuration:
+- Support configuration files
+- Environment variable overrides
+- Command-line parameter overrides
+- Validate configuration schemas
+
+## Output Formatting:
+- Support multiple output formats (human, JSON, YAML)
+- Use colored output when appropriate
+- Implement table formatting for lists
+- Provide verbose/quiet modes
+
+## Error Handling:
+- Return appropriate exit codes
+- Provide helpful error messages
+- Support debug output modes
+- Log errors to appropriate locations
+
+## Performance:
+- Fast startup time
+- Efficient argument parsing
+- Minimal memory usage
+- Responsive interactive commands
+
+## Testing:
+- Test CLI commands in integration tests
+- Verify output formats
+- Test error conditions
+- Validate help text and usage
