@@ -40,6 +40,12 @@ A **lightweight, high-performance** ROS2-compatible middleware implementation in
 - **CLI Tools** - `mini_ros` command-line interface for easy package operations
 - **Built-in Packages** - Production-ready turtlebot package included
 
+### Phase 3: Ecosystem Features ⚡
+- **ROS2 Bridge** - Seamless compatibility with existing ROS2 systems and nodes
+- **Plugin System** - Extensible architecture for custom transports and message handlers
+- **Performance Optimization** - Zero-copy patterns and high-throughput message passing
+- **Production Ready** - Monitoring, health checks, and deployment tools
+
 ## 🛠️ Quick Start
 
 ### 💻 API Overview
@@ -89,6 +95,39 @@ async fn main() -> Result<()> {
         values: vec![],
     };
 
+    Ok(())
+}
+```
+
+#### Phase 3: ROS2 Bridge & Plugin System
+```rust
+use mini_ros::prelude::*;
+use mini_ros::{create_ros2_bridge, PluginManager, CustomTransportPlugin};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // ROS2 Bridge - seamless integration
+    let mut bridge = create_ros2_bridge(0).await?;
+    bridge.initialize().await?;
+    
+    // Automatically bridge common topics
+    // /cmd_vel, /odom, /scan are now accessible from ROS2
+    
+    // Plugin System - extensible architecture
+    let mut plugin_manager = PluginManager::new();
+    
+    // Register custom transport plugin
+    let transport_plugin = Box::new(CustomTransportPlugin::new());
+    plugin_manager.register_plugin(transport_plugin).await?;
+    
+    // Initialize and start all plugins
+    plugin_manager.initialize_all().await?;
+    plugin_manager.start_all().await?;
+    
+    // Your robot logic here - now with ROS2 compatibility!
+    
+    plugin_manager.stop_all().await?;
+    bridge.shutdown().await?;
     Ok(())
 }
 ```
@@ -199,6 +238,12 @@ cargo run --example 03_services
 # ROS2-compatible message packages (NEW!)
 cargo run --example 16_message_packages_demo
 
+# Phase 3: ROS2 bridge compatibility (NEW!)
+cargo run --example 18_ros2_bridge_demo
+
+# Phase 3: Plugin system architecture (NEW!)
+cargo run --example 19_plugin_system_demo
+
 # Visualization with Rerun
 cargo run --example 04_visualization_basic --features visualization
 
@@ -273,10 +318,10 @@ cargo run --bin mini_ros run turtlebot py_controller
 - [x] Cross-language type system
 - [x] DDS transport layer
 
-### Phase 3: Ecosystem 🔮
-- [ ] ROS2 bridge compatibility
+### Phase 3: Ecosystem ⚡
+- [x] **ROS2 bridge compatibility** - Seamless integration with existing ROS2 systems
+- [x] **Plugin system** - Extensible architecture for custom transports and features
 - [ ] Additional language bindings
-- [ ] Plugin system
 - [ ] Production deployment tools
 
 ## 🔧 Development

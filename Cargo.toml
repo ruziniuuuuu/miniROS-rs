@@ -125,6 +125,14 @@ path = "examples/16_message_packages_demo.rs"
 name = "17_new_message_types_demo"
 path = "examples/17_new_message_types_demo.rs"
 
+[[example]]
+name = "18_ros2_bridge_demo"
+path = "examples/18_ros2_bridge_demo.rs"
+
+[[example]]
+name = "19_plugin_system_demo"
+path = "examples/19_plugin_system_demo.rs"
+
 # Binary executables
 [[bin]]
 name = "mini_ros"

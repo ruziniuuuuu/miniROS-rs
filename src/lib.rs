@@ -24,7 +24,10 @@ pub use communication::{
 
 pub use system::{
     DiscoveryService, LaunchConfig, LaunchDescription, LaunchManager, NodeLaunchConfig, Package,
-    PackageManager, ParameterClient, ParameterServer, ParameterValue,
+    PackageManager, ParameterClient, ParameterServer, ParameterValue, Ros2Bridge, Ros2BridgeConfig,
+    create_ros2_bridge, create_turtlebot_bridge,
+    Plugin, PluginManager, PluginConfig, PluginStatus, CustomTransportPlugin, MonitoringPlugin,
+    PluginConfigSchema, PluginContext, ConfigField, ConfigFieldType,
 };
 
 // Transport layer exports based on features
